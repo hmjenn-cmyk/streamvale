@@ -1,0 +1,844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streamvale — Mountain Snowmelt to the Plains</title>
+<style>
+  :root{--bg:#0f1e2e;--panel:#162c44;--accent:#38bdf8;--green:#4ade80;--sand:#fbbf24}
+  *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1e3a5f, var(--bg));color:#e8f1ff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+  header{width:100%;max-width:1080px;padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:22px;letter-spacing:.5px} h1 span{color:var(--accent)}
+  #hud{display:flex;gap:8px;flex-wrap:wrap}
+  #transport{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .stat{background:var(--panel);border:1px solid #2a4a6b;border-radius:10px;padding:6px 12px;min-width:86px;text-align:center}
+  .stat b{display:block;font-size:18px} .stat small{opacity:.7;font-size:11px;text-transform:uppercase}
+  #wrap{width:100%;max-width:1080px;display:grid;grid-template-columns:190px 1fr 240px;gap:12px;padding:10px 16px 20px}
+  @media(max-width:900px){#wrap{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid #2a4a6b;border-radius:14px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:1px;opacity:.8}
+  .tool{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:#0f2438;border:2px solid transparent;color:#e8f1ff;border-radius:10px;padding:8px;margin-bottom:8px;cursor:pointer}
+  .tool:hover{border-color:#2a4a6b} .tool.active{border-color:var(--accent);background:#12324f}
+  .tool .ico{font-size:20px} .tool small{display:block;opacity:.7}
+  #canvasHolder{position:relative}
+  canvas{width:100%;height:auto;border-radius:12px;display:block;background:#0b1a2b;cursor:crosshair;touch-action:none}
+  #toolbar2{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  button{background:#0f2438;color:#e8f1ff;border:1px solid #2a4a6b;border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--accent)} button.primary{background:var(--accent);color:#04263b;font-weight:700;border:none}
+  #log{height:230px;overflow:auto;font-size:13px;background:#0b1a2b;border-radius:8px;padding:8px}
+  #log, #log div{font-size:26px!important;line-height:1.35}
+  #info{font-size:26px!important}
+  #toolbar2 #hint{font-size:26px!important}
+  #toolDesc{font-size:26px!important}
+  .goalcard, .goalcard *{font-size:26px!important}
+  #log div{margin-bottom:4px;opacity:.9}
+  #info{font-size:13px;line-height:1.5;min-height:120px;background:#0b1a2b;border-radius:8px;padding:8px}
+  #goalbar{height:10px;background:#0b1a2b;border-radius:99px;overflow:hidden;margin-top:6px}
+  #goalfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .5s}
+  #canvasHolder{position:relative}
+  #tut{position:fixed;right:14px;bottom:14px;background:rgba(6,20,38,.93);border:2px solid var(--accent);border-radius:12px;padding:10px 14px;max-width:330px;text-align:center;font-size:14px;z-index:50;pointer-events:none;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #tut small{opacity:.65} #tut button{margin-top:6px;font-size:12px;pointer-events:auto}
+  #overlay{position:fixed;inset:0;background:rgba(3,10,20,.82);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+  #overlay .box{max-width:560px;background:var(--panel);border:1px solid #2a4a6b;border-radius:16px;padding:24px}
+  #overlay h2{margin-top:0} .kbd{background:#0b1a2b;border:1px solid #2a4a6b;border-radius:6px;padding:1px 6px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏔️ <span>Streamvale</span> — snowmelt to the plains</h1>
+  <div id="hud">
+    <div class="stat"><b id="sMoney">$180</b><small>💰 money</small></div>
+    <div class="stat"><b id="sFood">10</b><small>🌾 food</small></div>
+    <div class="stat"><b id="sWood">0</b><small>🪵 wood</small></div>
+    <div class="stat"><b id="sStone">0</b><small>🪨 stone</small></div>
+    <div class="stat"><b id="sPop">0</b><small>🧑 population</small></div>
+    <div class="stat"><b id="sWater">0</b><small>💧 watered</small></div>
+    <div class="stat"><b id="sDay">Day 1</b><small>☀️ time</small></div>
+    <div class="stat"><b id="sLevel">1</b><small id="sLevelName">🗺️ Grassy Plains</small></div>
+  </div>
+  <div id="transport">
+    <button id="bPause" title="Pause">⏸️ Pause</button>
+    <button id="bPlay" class="primary" title="Play">▶️ Play</button>
+    <button id="b1" class="primary" title="Normal speed">1x</button>
+    <button id="b2" title="Double speed">2x</button>
+    <button id="b3" title="Quad speed">4x</button>
+  </div>
+</header>
+
+<div id="wrap">
+  <div class="card">
+    <h3>🛠️ Build tools</h3>
+    <div id="tools"></div>
+    <div style="margin-top:8px;display:grid;gap:6px">
+      <button id="bNew">🗺️ New valley</button>
+      <button id="bHelp">❓ How to play</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="canvasHolder"><canvas id="cv" width="800" height="600"></canvas><div id="tut" class="hidden"><span id="tutTxt"></span><br><button id="tutSkip">Skip tutorial</button></div></div>
+    <div id="toolbar2">
+      <span id="hint" style="font-size:13px;opacity:.85">1 farm needs 1👷 + feeds 5👪 (midday census!). Green land only — desert greens in 30s by water. Far fields need a 🏞️ lake!</span>
+    </div>
+    <div class="card goalcard" style="margin-top:10px;padding:8px">
+      <div style="font-size:13px">🎯 Overall goal: <b>250👪</b> <span id="goalTxt">(0/250)</span></div>
+      <div id="goalbar"><div id="goalfill"></div></div>
+      <div id="toolDesc" style="font-size:13px;margin-top:6px;opacity:.92"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔍 Tile info</h3>
+    <div id="info">Click any tile to inspect it.</div>
+    <h3 style="margin-top:10px">📜 Valley log</h3>
+    <div id="log"></div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="box" id="overlayBox">
+    <h2>🏔️ Welcome to Streamvale!</h2>
+    <p>You are the waterkeeper. Mine the rocks to break through to the springs, then build your canals, and houses to get $$$. Farm - Build - Expand!</p>
+    <button class="primary" id="bStart" style="font-size:16px;padding:10px 18px">Start building ▼</button>
+  </div>
+</div>
+
+<script>
+let COLS=16, ROWS=15;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let TW=cv.width/COLS, TH=cv.height/ROWS;
+function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.measureText(txt).width+10;ctx.fillStyle=bg||'rgba(4,20,38,.78)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-w/2,cy-fs/2-3,w,fs+7,5);else ctx.rect(cx-w/2,cy-fs/2-3,w,fs+7);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
+
+let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], treesExist=false, lastRustle=0, lastWard='';
+// ---- first-time tutorial: one prompt at a time until every block is used once ----
+const tut={canal:false,mine:false,farm:false,house:false,chop:false,expand:false,dam:false,lake:false,mend:false,done:false};
+const TUT_ORDER=['canal','mine','farm','house','chop','expand','dam','lake','mend'];
+const TUT_TEXT={
+ canal:'① Dig a canal DOWNHILL from a spring — pick 🟦 and drag on grass.',
+ mine:'② Blast the twin rock rows (2–3) — pick ⛏️, 1 click per rock (15s → +2🪨).',
+ farm:'③ Build a farm (🌾 $25) on GREEN land beside BLUE water.',
+ house:'④ Build a house (🏠 $50) on green land — settles +2👪.',
+ chop:'⑤ Chop a tree (🪓) — 1 click, timber in 10s (+2🪵, big trees 20s/+4🪵).',
+ expand:'⑥ Expand a house 4× (🏘️: 6🪵+$30 per level) — each level adds a floor; Lv4 high-rise holds 24!',
+ dam:'⑦ Build a dam (🚧) to push blue water past 4 tiles.',
+ lake:'⑧ Fields >10 rows out need a lake (🏞️ $100, 2×3).',
+ mend:'⑨ Survive a 🌙 night — wave over each beast 20× to chase it off! Then mend (🔨): farms 4🪵, houses 4🪨.'};
+function tutDone(k){if(tut.done)return;if(!tut[k])tut[k]=true;renderTut();}
+function houseCount(){let h=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct==='village')h++;return h;}
+function renderTut(){
+  const box=document.getElementById('tut');
+  if(!box)return;
+  if(tut.done){box.classList.add('hidden');return;}
+  const next=TUT_ORDER.find(k=>!tut[k]);
+  if(!next){tut.done=true;box.classList.add('hidden');log('✅ Valley mastered! No more prompts — reach 250👪!');sfx(880,0.2,'sine',0.1);return;}
+  box.classList.remove('hidden');
+  // expand tip unlocks only after 5 houses stand
+  if(next==='expand'){
+    const h=houseCount();
+    if(h<5){document.getElementById('tutTxt').innerHTML=`🏘️ Raise more houses to unlock the Expand tip (<b>${h}/5</b>)…`;return;}
+  }
+  document.getElementById('tutTxt').innerHTML=`<b>Next:</b> ${TUT_TEXT[next]} <small>(${TUT_ORDER.indexOf(next)+1}/${TUT_ORDER.length})</small>`;
+}
+let flowPhase=0;
+const MAX_REACH=4, CHOP_MS=10000, MINE_MS=15000;
+const TICKS_PER_DAY=225, NIGHT_TICKS=20; // 225 × 0.8s ticks = 3-minute days
+
+const TOOLS=[
+ {id:'canal', ico:'🟦', name:'Dig canal', cost:5, desc:'Drag DOWNHILL. 4 max! Far fields need a 🏞️ lake.'},
+ {id:'dam', ico:'🚧', name:'Dam', cost:35, desc:'On canal/grass. Resets 4-tile range.'},
+ {id:'farm', ico:'🌾', name:'Farm', cost:25, desc:'GREEN land + BLUE water + 1👪 worker. Feeds 5.'},
+ {id:'village', ico:'🏠', name:'House', cost:50, desc:'Green land only. Settle +2👪. Max 12, expand ×2!'},
+ {id:'expand', ico:'🏘️', name:'Expand house', cost:30, desc:'6🪵+$30 per level (×4). Lv4 high-rise: 24!'},
+ {id:'chop', ico:'🪓', name:'Chop trees', cost:0, desc:'1 click — 10s (big tree 20s, +4🪵).'},
+ {id:'mine', ico:'⛏️', name:'Mine rock', cost:0, desc:'1 click per rock — 15s → +2🪨.'},
+ {id:'mend', ico:'🔨', name:'Mend', cost:0, desc:'Fix farm 4🪵, house 4🪨.'},
+ {id:'lake', ico:'🏞️', name:'Lake', cost:100, desc:'2×3 reservoir. Waters 4 around it.'},
+ {id:'bulldoze', ico:'🧹', name:'Bulldoze', cost:0, desc:'Remove canal/dam/building. 50% refund.'},
+ {id:'inspect', ico:'🔍', name:'Inspect', cost:0, desc:'Click to learn about a tile.'},
+];
+
+function rnd(n){return Math.floor(Math.random()*n)}
+function log(msg){const l=document.getElementById('log');const d=document.createElement('div');d.textContent='D'+day+' '+msg;l.prepend(d);while(l.children.length>40)l.lastChild.remove();}
+function sfx(f,d=0.12,type='sine',v=0.12){try{const a=sfx.ac||(sfx.ac=new (window.AudioContext||window.webkitAudioContext)());const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);o.stop(a.currentTime+d);}catch(e){}}
+function howl(){try{const a=sfx.ac||(sfx.ac=new (window.AudioContext||window.webkitAudioContext)());const mk=(dl,f0,f1,f2,dur,v)=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';const t0=a.currentTime+dl;o.frequency.setValueAtTime(f0,t0);o.frequency.linearRampToValueAtTime(f1,t0+dur*0.35);o.frequency.linearRampToValueAtTime(f2,t0+dur);g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur+0.1);o.connect(g);g.connect(a.destination);o.start(t0);o.stop(t0+dur+0.15);};mk(0,260,640,360,1.5,0.09);mk(0.9,300,560,340,1.1,0.06);}catch(e){}}
+let noiseBuf=null;
+function noiseBurst(dur,v,freq){try{const a=sfx.ac||(sfx.ac=new (window.AudioContext||window.webkitAudioContext)());if(!noiseBuf){noiseBuf=a.createBuffer(1,a.sampleRate,a.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}const s=a.createBufferSource();s.buffer=noiseBuf;s.loop=true;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=freq;const g=a.createGain();g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);s.connect(f);f.connect(g);g.connect(a.destination);s.start();s.stop(a.currentTime+dur+0.05);}catch(e){}}
+function rustle(){noiseBurst(0.5,0.05,1400);} // 50% volume leaves
+function flowSnd(){noiseBurst(1.2,0.05,650);} // 50% volume stream
+function drip(){sfx(880,0.09,'sine',0.05);setTimeout(()=>sfx(520,0.08,'sine',0.04),95);} // stagnant drip
+
+function blankTile(base){return {base,struct:null,water:false,stale:false,dist:Infinity,job:null,broken:false,abandoned:false,bigTree:false,greenT:0,level:0,fProg:0,fStock:0,vPop:0,vTimer:0,vStarve:0};}
+function genBase(x,y){
+  const r=Math.random();
+  if(y===0)return r<0.15?'tree':'rock';              // high crags (+25% trees)
+  if(y===1||y===2)return 'rock';                     // twin grey rock barrier
+  if(y>=ROWS-4){if(level===2)return 'grass';if(r<0.05)return 'rock';return 'desert';} // cracked desert (snowy grass in L2): NO trees
+  const treeP=(0.38-0.23*((y-3)/(ROWS-8)))*1.25;      // forests crowd the mountains (+25%)
+  if(r<0.05)return 'rock';
+  if(r<0.05+treeP)return 'tree';
+  return 'grass';
+}
+function currentGoal(){return 250;}
+function nightRate(){return level===2?0.3:0.2;}
+function maxPop(lv){return 12+3*lv;} // house levels 0..4 → max 12,15,18,21,24
+// groups of 5+ trees grow 1 BIG tree (same icon, 2× size, 20s chop, +4🪵)
+function makeBigTrees(){
+  const seen=new Set();
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const k=x+','+y, t0=grid[y][x];
+    if(t0.base!=='tree'||t0.bigTree||t0.struct||t0.job||seen.has(k))continue;
+    const group=[], q=[[x,y]]; let hasBig=false;
+    while(q.length){
+      const [cx,cy]=q.pop(), kk=cx+','+cy;
+      if(seen.has(kk))continue; seen.add(kk);
+      const ct=grid[cy][cx];
+      if(ct.base!=='tree'||ct.struct||ct.job)continue;
+      if(ct.bigTree){hasBig=true;continue;}
+      group.push([cx,cy]);
+      for(const [nx,ny] of neighbors(cx,cy))q.push([nx,ny]);
+    }
+    if(group.length>=5&&!hasBig){const [bx,by]=group[Math.floor(Math.random()*group.length)];grid[by][bx].bigTree=true;}
+  }
+}
+// rows between a tile-row and the nearest spring/lake water
+function rowsFromWater(y){
+  let best=Infinity;
+  for(let yy=0;yy<ROWS;yy++)for(let xx=0;xx<COLS;xx++){const s=grid[yy][xx];
+    if(s.base==='source'||s.struct==='lake'){const d=Math.abs(y-yy);if(d<best)best=d;}}
+  return best;
+}
+function expandGrid(){
+  for(let y=0;y<ROWS;y++)for(let i=0;i<2;i++)grid[y].push(blankTile(genBase(COLS+i,y)));
+  COLS+=2;
+  const bottom=[];for(let x=0;x<COLS;x++)bottom.push(blankTile(genBase(x,ROWS)));
+  grid.push(bottom);ROWS+=1;
+  TW=cv.width/COLS;TH=cv.height/ROWS;
+  log(`🗺️ The valley grows! +2 columns, +1 row — now ${COLS}×${ROWS}.`);
+}
+function regrowTrees(){
+  const empty=[];
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+    if(t.base==='grass'&&!t.struct&&!t.job)empty.push([x,y]);}
+  const n=Math.min(empty.length,Math.max(empty.length?1:0,Math.floor(empty.length*0.04)));
+  for(let i=0;i<n;i++){const k=Math.floor(Math.random()*empty.length);const [x,y]=empty.splice(k,1)[0];grid[y][x].base='tree';}
+  if(n>0)log(`🌱 ${n} new tree${n>1?'s':''} sprouted on empty grass.`);
+}
+function newMap(){
+  COLS=16;ROWS=15;TW=cv.width/COLS;TH=cv.height/ROWS;
+  grid=[];
+  for(let y=0;y<ROWS;y++){let row=[];for(let x=0;x<COLS;x++)row.push(blankTile(genBase(x,y)));grid.push(row);}
+  // two springs: peak centre + a rock-ringed lowland spring (5 from right, 10 rows down)
+  const s2={x:COLS-5,y:10};
+  grid[0][Math.floor(COLS/2)]=blankTile('source');
+  grid[s2.y][s2.x]=blankTile('source');
+  for(let dy=-1;dy<=1;dy++)for(let dx=-1;dx<=1;dx++){
+    if(!dx&&!dy)continue;
+    const nx=s2.x+dx, ny=s2.y+dy;
+    if(inB(nx,ny)&&grid[ny][nx].base!=='source'){grid[ny][nx].base='rock';grid[ny][nx].struct=null;grid[ny][nx].job=null;grid[ny][nx].bigTree=false;}
+  }
+  money=180;food=10;wood=0;stone=0;day=1;tickInDay=0;totalTicks=0;won=false;selected=null;lastHit='';nightLeft=0;animals=[];
+  makeBigTrees();
+  log(`Level ${level} — ${level===2?'Snowy Tundra':'Grassy Plains'}! Goal: 250👪. Mine the twin rock rows (2–3)!`);
+  computeWater();updateHUD();
+}
+
+function advanceLevel(){level=2;newMap();document.getElementById('overlay').classList.add('hidden');log('❄️ Level 2 — Snowy Tundra! Same rules under snow, hungrier beasts (30% raids)!');}
+function inB(x,y){return x>=0&&y>=0&&x<COLS&&y<ROWS}
+function neighbors(x,y){return [[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([a,b])=>inB(a,b))}
+
+function computeWater(){
+  // reset; water only travels MAX_REACH (8) tiles from a spring/well/dam
+  treesExist=false;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){grid[y][x].water=false;grid[y][x].stale=false;grid[y][x].dist=Infinity;if(grid[y][x].base==='tree')treesExist=true;}
+  let q=[];
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x];
+    if(t.base==='source'||t.struct==='lake'){t.water=true;t.dist=0;q.push([x,y,0]);}
+  }
+  const conducts=(t)=>t.base==='source'||t.struct==='canal'||t.struct==='dam'||t.struct==='lake';
+  const emittedDams=new Set();
+  q.sort((a,b)=>a[2]-b[2]);
+  while(q.length){
+    let bi=0;for(let i=1;i<q.length;i++)if(q[i][2]<q[bi][2])bi=i;
+    const [x,y,d]=q.splice(bi,1)[0];
+    const t=grid[y][x];
+    let outD=d;
+    if(t.struct==='dam'&&t.water){
+      const key=x+','+y;
+      if(!emittedDams.has(key)){emittedDams.add(key);outD=0;t.dist=Math.min(t.dist,0);}
+      else outD=t.dist;
+    }
+    for(const [nx,ny] of neighbors(x,y)){
+      const nt=grid[ny][nx];
+      if(!(nt.struct==='canal'||nt.struct==='dam'))continue;
+      const nd=outD+1;
+      if(nd>MAX_REACH)continue;
+      if(nd<nt.dist){
+        nt.dist=nd;nt.water=true;
+        q.push([nx,ny,nd]);
+      } else if(!nt.water){
+        nt.dist=Math.min(nt.dist,nd);nt.water=true;q.push([nx,ny,nd]);
+      }
+    }
+  }
+  // stale pass: canals/dams PHYSICALLY connected to a source but past the
+  // 4-tile limit. Brown stagnant water: looks wet, feeds nothing.
+  {
+    const seen=new Set(), qq=[];
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+      const t=grid[y][x];
+      if(t.base==='source'||t.struct==='lake'){seen.add(x+','+y);qq.push([x,y]);}
+    }
+    while(qq.length){
+      const [x,y]=qq.pop();
+      for(const [nx,ny] of neighbors(x,y)){
+        const k=nx+','+ny, nt=grid[ny][nx];
+        if(seen.has(k))continue;
+        if(nt.struct==='canal'||nt.struct==='dam'){seen.add(k);qq.push([nx,ny]);}
+      }
+    }
+    for(const k of seen){
+      const [x,y]=k.split(',').map(Number);
+      const t=grid[y][x];
+      if((t.struct==='canal'||t.struct==='dam')&&!t.water)t.stale=true;
+    }
+  }
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x];
+    if(t.struct==='farm'||t.struct==='village'){
+      for(const [nx,ny] of neighbors(x,y)){
+        const n=grid[ny][nx];
+        if(n.water&&conducts(n)){t.water=true;break;}
+      }
+    }
+  }
+}
+
+function totalPop(){let s=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.struct==='village'&&!t.broken)s+=t.vPop||0;}return s;}
+function countWatered(){let s=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.water&&(t.struct==='canal'||t.struct==='dam'||t.struct==='lake'||t.struct==='farm'||t.struct==='village'))s++;}return s;}
+// one hit per tile-entry while dragging (clicks always count) — chopping/mining takes time
+function countHit(x,y,isDrag){
+  const hk=tool+x+','+y;
+  if(isDrag){if(lastHit===hk)return false;}
+  lastHit=hk;return true;
+}
+
+function tryBuild(x,y,isDrag){
+  if(!inB(x,y))return;
+  const t=grid[y][x];
+  if(tool==='inspect'){selected={x,y};renderInfo();return;}
+  if(tool==='bulldoze'){
+    if(t.struct==='canal'||t.struct==='dam'||t.struct==='farm'||t.struct==='village'||t.struct==='lake'){
+      const refund={canal:2,dam:17,farm:12,village:25,lake:8}[t.struct]||0;
+      let wback=0;if(t.struct==='village'&&(t.level||0)>0){wback=2*(t.level||0);wood+=wback;}
+      money+=refund;t.struct=null;t.level=0;t.vPop=0;t.water=false;t.stale=false;t.broken=false;t.abandoned=false;computeWater();updateHUD();sfx(300,0.08,'square',0.06);log(`Bulldozed (${x},${y}) +$${refund}${wback?` +${wback}🪵`:''}.`);
+    }
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='canal'){
+    if(t.base==='source'){if(!isDrag){log('⛔ Spring itself already flows. Dig downhill from it.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.base==='rock'){if(!isDrag){log('⛔ Solid rock! Mine it first (⛏️, 1 click, 15s), then dig.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.struct!==null){return;}
+    if(t.job){if(!isDrag)log('⛔ Work in progress here — wait for the timer!');return;}
+    // far fields (>10 rows from spring/lake water) need a lake first
+    if(rowsFromWater(y)>10){if(!isDrag){log('⛔ Too far from spring water (>10 rows)! Build a 🏞️ lake ($100, 2×3) out here first.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    let cost=5;if(t.base==='tree')cost=8;
+    if(money<cost){if(!isDrag){log(`⛔ Need $${cost} for canal.`);sfx(140,0.15,'sawtooth',0.08);}return;}
+    money-=cost;if(t.base==='tree'){const w=t.bigTree?2:1;t.base='grass';t.bigTree=false;t.job=null;wood+=w;if(!isDrag)log(`🪵 Cleared a tree → +${w} wood.`);}t.struct='canal';
+    computeWater();updateHUD();sfx(520+Math.random()*120,0.06,'triangle',0.07);if(t.water)flowSnd();else if(t.stale)drip();tutDone('canal');
+    return;
+  }
+  if(tool==='chop'){
+    if(!(t.base==='tree'&&t.struct===null)){if(!isDrag){log(t.struct!==null?'⛔ Chop is for standing 🌳 trees — clear buildings with 🧹.':'⛔ No tree here. Forests crowd the mountain slopes!');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.job){if(!isDrag){const s=Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000));log(`⏳ Already chopping @(${x},${y}) — ${s}s left.`);}return;}
+    if(!countHit(x,y,isDrag))return;
+    t.job={kind:'chop',doneAt:performance.now()+(t.bigTree?CHOP_MS*2:CHOP_MS),total:(t.bigTree?CHOP_MS*2:CHOP_MS)/1000,big:!!t.bigTree};
+    sfx(180,0.08,'square',0.09);updateHUD();tutDone('chop');
+    if(!isDrag)log(`🪓 Chopping ${t.bigTree?'BIG tree ':''}@(${x},${y}) — timber in ${t.bigTree?20:10}s…`);
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='mine'){
+    if(!(t.base==='rock'&&t.struct===null)){if(!isDrag){log(t.base==='source'?'⛔ The spring needs no mining.':'⛔ Nothing to mine — aim at grey barrier rock (rows 2–3).');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.job){if(!isDrag){const s=Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000));log(`⏳ Already mining @(${x},${y}) — ${s}s left.`);}return;}
+    if(!countHit(x,y,isDrag))return;
+    t.job={kind:'mine',doneAt:performance.now()+MINE_MS,total:MINE_MS/1000};
+    sfx(120,0.07,'square',0.09);updateHUD();tutDone('mine');
+    if(!isDrag)log(`⛏️ Mining @(${x},${y}) — cleared in 15s…`);
+    selected={x,y};renderInfo();return;
+  }
+  if(isDrag)return;
+  if(tool==='expand'){
+    if(t.struct==='village'&&(t.level||0)<4){
+      if(t.broken){log('⛔ Mend it first (🔨: 4🪨)!');sfx(140,0.15,'sawtooth',0.08);return;}
+      if(t.abandoned){log('🏚️ Abandoned — settlers return at midday census once farms allow!');sfx(140,0.15,'sawtooth',0.08);return;}
+      if(wood<6){log(`⛔ Level ${(t.level||0)+1} needs 6🪵 (have ${wood}). Chop 🌳 trees (1 click, 10s each)!`);sfx(140,0.15,'sawtooth',0.08);return;}
+      if(money<30){log('⛔ Each level also needs $30.');sfx(140,0.15,'sawtooth',0.08);return;}
+      wood-=6;money-=30;t.level=(t.level||0)+1;
+      const before=t.vPop||2;t.vPop=Math.min(maxPop(t.level),before*2);
+      computeWater();updateHUD();sfx(523,0.15,'sine',0.1);setTimeout(()=>sfx(784,0.2,'sine',0.1),120);
+      log(t.level>=4?`🏙️ HIGH-RISE @(${x},${y})! ${before}→${t.vPop}👪 — max level, 24 max!`:`🏘️ House @(${x},${y}) → level ${t.level}! ${before}→${t.vPop}👪 (max ${maxPop(t.level)}).`);tutDone('expand');
+    } else if(t.struct==='village'){log('Already max level (24👪 high-rise)!');}
+    else{log('⛔ Expand works on a 🏠 house (4 levels to high-rise).');sfx(140,0.15,'sawtooth',0.08);}
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='dam'){
+    if(t.base==='source'){log('⛔ The spring needs no dam.');sfx(140,0.15,'sawtooth',0.08);return;}
+    if(t.base==='rock'){log('⛔ Solid rock! Mine it (⛏️) first.');sfx(140,0.15,'sawtooth',0.08);return;}
+    if(t.struct==='dam'){log('Already a dam here.');return;}
+    if(t.struct==='canal'){
+      if(money<30){log('⛔ Dam upgrade needs $30.');sfx(140,0.15,'sawtooth',0.08);return;}
+      money-=30;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
+      log(t.water?`🚧 Dam online at (${x},${y}) — pressure reset, +${MAX_REACH} tiles!`:`🚧 Dam built at (${x},${y}) but DRY — it must be within ${MAX_REACH} of water to turn on.`);
+    } else if(t.struct===null&&(t.base==='grass'||t.base==='desert')){
+      if(rowsFromWater(y)>10){log('⛔ Too far from spring water (>10 rows)! Build a 🏞️ lake ($100, 2×3) out here first.');sfx(140,0.15,'sawtooth',0.08);return;}
+      if(money<35){log('⛔ Dam needs $35 ($30 on existing canal).');sfx(140,0.15,'sawtooth',0.08);return;}
+      money-=35;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
+      log(t.water?`🚧 Dam + canal built at (${x},${y}) — pressure reset!`:`🚧 Dam built at (${x},${y}) but DRY — connect it within ${MAX_REACH} tiles of water.`);
+    } else {log('⛔ Dams go on empty grass or an existing canal.');sfx(140,0.15,'sawtooth',0.08);return;}
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='farm'){
+    if(t.base!=='grass'||t.struct!==null){log('⛔ Farms go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
+    if(money<25){log('⛔ Need $25 for farm.');sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=25;t.struct='farm';t.fProg=0;t.fStock=0;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('farm');log(`🌾 Farm built at (${x},${y}). Needs BLUE water + 1👪 worker, feeds 5!`);
+  }
+  if(tool==='village'){
+    if(t.base!=='grass'||t.struct!==null){log('⛔ Houses go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
+    if(money<50){log('⛔ Need $50 for house.');sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=50;t.struct='village';t.level=0;t.vPop=2;t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
+  }
+  if(tool==='mend'){
+    if((t.struct==='farm'||t.struct==='village')&&t.broken){
+      if(t.struct==='farm'){
+        if(wood<4){log(`⛔ Mending this farm needs 4🪵 (have ${wood}).`);sfx(140,0.15,'sawtooth',0.08);return;}
+        wood-=4;t.broken=false;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('mend');log(`🔨 Farm @(${x},${y}) mended for 4🪵!`);
+      } else {
+        if(stone<4){log(`⛔ Mending this house needs 4🪨 (have ${stone}). Mine barrier rock!`);sfx(140,0.15,'sawtooth',0.08);return;}
+        stone-=4;t.broken=false;computeWater();updateHUD();sfx(523,0.12,'sine',0.1);tutDone('mend');log(`🔨 House @(${x},${y}) mended for 4🪨 — ${t.vPop}👪 return!`);
+      }
+    } else if(!isDrag){log(t.struct?'⛔ Only broken 🐾 farms/houses need mending.':'⛔ Nothing to mend here.');sfx(140,0.15,'sawtooth',0.08);}
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='lake'){
+    // anchor = NW corner of a 2×3 reservoir, $100 flat
+    const cells=[];let ok=true, why='';
+    for(let dy=0;dy<3&&ok;dy++)for(let dx=0;dx<2&&ok;dx++){
+      const nx=x+dx, ny=y+dy;
+      if(!inB(nx,ny)){ok=false;why='Lake needs 2×3 clear land — click with room to the south-east.';break;}
+      const c=grid[ny][nx];
+      if(c.struct||c.job||!(c.base==='grass'||c.base==='desert')){ok=false;why='Lake needs 2×3 clear land (no rock, trees, buildings).';break;}
+      cells.push([nx,ny]);
+    }
+    if(!ok){log('⛔ '+why);sfx(140,0.15,'sawtooth',0.08);return;}
+    if(money<100){log('⛔ Lake costs $100.');sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=100;cells.forEach(([nx,ny])=>{grid[ny][nx].struct='lake';});
+    computeWater();updateHUD();sfx(330,0.25,'sine',0.1);tutDone('lake');
+    log(`🏞️ Lake built @(${x},${y})! Reservoir waters 4 tiles around it.`);
+    selected={x,y};renderInfo();return;
+  }
+  selected={x,y};renderInfo();
+}
+
+// simulation tick = 0.8s real (~6 game-minutes); 225 ticks = one 3-minute day
+function simTick(){
+  totalTicks++;tickInDay++;
+  if(nightLeft>0){nightLeft--;if(nightLeft===0)document.getElementById('hint').textContent='☀️ Dawn breaks. Mend (🔨) what the beasts wrecked — farms 4🪵, houses 4🪨!';}
+  let harvests=0, workers=totalPop();
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x];
+    if(t.struct==='farm'&&t.water&&!t.broken&&workers>0&&t.fStock<5){workers--;t.fProg++;if(t.fProg>=2){t.fProg=0;t.fStock=Math.min(5,t.fStock+1);food++;harvests++;money+=0.5;}}
+    if(t.struct==='farm'&&!t.water){t.fProg=0;}
+  }
+  if(harvests>0&&totalTicks%4===0)sfx(980,0.07,'triangle',0.03);
+  if(tickInDay===Math.floor(TICKS_PER_DAY/2)){
+    // midday census: 1 worker runs 1 farm, 1 farm feeds 5 people
+    let F=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.struct==='farm'&&t.water&&!t.broken)F++;}
+    const P=totalPop();
+    if(F>P)log(`👷 ${F-P} farm${F-P>1?'s':''} idle — each farm needs 1👪 worker!`);
+    if(P>F*5){
+      let bx=-1,by=-1,best=0;
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+        if(t.struct==='village'&&!t.broken&&!t.abandoned&&t.vPop>best){best=t.vPop;bx=x;by=y;}}
+      if(best>0){grid[by][bx].vPop=0;grid[by][bx].abandoned=true;updateHUD();sfx(196,0.4,'sawtooth',0.06);log(`🏚️ House @(${bx},${by}) ABANDONED! ${F} farm${F===1?'':'s'} feed ${F*5}👪 but the valley holds ${P}. Build more farms!`);}
+      else log('⚠️ Starving valley — not enough farms, and no inhabited houses left!');
+    } else {
+      let rx=-1,ry=-1;
+      for(let y=0;y<ROWS&&rx<0;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+        if(t.struct==='village'&&!t.broken&&t.abandoned){rx=x;ry=y;break;}}
+      if(rx>=0){grid[ry][rx].vPop=2;grid[ry][rx].abandoned=false;updateHUD();sfx(660,0.12,'sine',0.08);log(`🏠 Settlers return to @(${rx},${ry})! +2👪 (farms suffice).`);}
+    }
+  }
+  if(tickInDay>=TICKS_PER_DAY){
+    tickInDay=0;day++;
+    const pop=totalPop();
+    let canals=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct==='canal'||grid[y][x].struct==='dam')canals++;
+    const upkeep=Math.floor(canals/8);
+    money-=upkeep;
+    log(`☀️ Day ${day}: -$${upkeep} canal upkeep (pop ${pop}, taxes flow $0.50👪/s live). Goal: ${currentGoal()}👪.`);
+    if(Math.random()<0.18&&day>2){
+      food+=4;money+=5;log('🌧️ Mountain rain! +4 food, farms surge.');sfx(600,0.3,'sine',0.05);
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.struct==='farm'&&!t.water){food++;}}
+    }
+    // 🌙 NIGHT: wolves & bears break 20% (grassy plains) / 30% (snowy tundra) of outer farms/houses
+    nightLeft=NIGHT_TICKS;
+    howl();
+    {
+      // beasts only stalk the OUTER line: buildings touching non-building tiles
+      const all=[];
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+        if((t.struct==='farm'||t.struct==='village')&&!t.broken&&!t.abandoned)all.push([x,y]);}
+      const outer=all.filter(([x,y])=>neighbors(x,y).some(([nx,ny])=>{if(!inB(nx,ny))return true;const s=grid[ny][nx].struct;return s!=='farm'&&s!=='village';}));
+      const pool=outer.length?outer:all;
+      for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+      const hit=pool.slice(0,Math.ceil(pool.length*nightRate()));
+      hit.forEach(([x,y])=>{grid[y][x].broken=true;});
+      animals=hit.map(([x,y],i)=>({x,y,kind:i%2?'🐻':'🐺',scares:0}));lastWard='';
+      document.getElementById('hint').textContent='🌙 Wave your mouse VIGOROUSLY over each beast 20× to chase it off and save the building!';
+      if(hit.length)log(`🌙 Night falls (Day ${day}): wolves & bears broke ${hit.length} outer building${hit.length>1?'s':''} (🐾)! Mend: farms 4🪵, houses 4🪨.`);
+      else log(`🌙 Night falls (Day ${day}): all quiet — no buildings to raid.`);
+    }
+    if(day%3===0)expandGrid();
+    else log(`🗺️ Valley expansion in ${3-day%3} day${3-day%3>1?'s':''} (every 3rd dawn).`);
+    regrowTrees();
+    makeBigTrees();
+    if(totalPop()>=currentGoal()&&!won){won=true;sfx(523,0.4,'sine',0.12);setTimeout(()=>sfx(784,0.5,'sine',0.12),200);
+      document.getElementById('overlay').classList.remove('hidden');
+      document.getElementById('overlayBox').innerHTML=`<h2>congratulations!</h2><p>You reached <b>${totalPop()} people</b>! Keep playing 'grassy plains', or advance to level 2 'snowy tundra'?</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="document.getElementById('overlay').classList.add('hidden')">Keep playing 'grassy plains'</button><button onclick="advanceLevel()">Advance to level 2 'snowy tundra'</button></div>`;}
+  }
+  computeWater();updateHUD();
+}
+
+function updateHUD(){
+  document.getElementById('sMoney').textContent='$'+Math.floor(money);
+  document.getElementById('sFood').textContent=food;
+  document.getElementById('sWood').textContent=wood;
+  document.getElementById('sStone').textContent=stone;
+  document.getElementById('sPop').textContent=totalPop();
+  document.getElementById('sWater').textContent=countWatered();
+  const hrs=String((6+Math.floor(tickInDay/TICKS_PER_DAY*24))%24).padStart(2,'0');
+  document.getElementById('sDay').textContent=`Day ${day} ${hrs}:00`;
+  document.getElementById('sLevel').textContent=level;
+  document.getElementById('sLevelName').textContent=level===2?'🗺️ Snowy Tundra':'🗺️ Grassy Plains';
+  document.getElementById('goalTxt').textContent=`(${totalPop()}/${currentGoal()})`;
+  document.getElementById('goalfill').style.width=Math.min(100,totalPop()/currentGoal()*100)+'%';
+  document.getElementById('sMoney').style.color=money<20?'#f87171':'#fff';
+  document.getElementById('sFood').style.color=food<=2?'#f87171':'#fff';
+  renderInfo();
+}
+
+function renderInfo(){
+  const el=document.getElementById('info');
+  if(!selected){el.innerHTML='Click any tile to inspect it.';return;}
+  const {x,y}=selected,t=grid[y][x];
+  let baseName={grass:y===0?'High crag meadow':'Meadow',rock:(y===1||y===2)?'Rock barrier 🧱':'Rock',tree:'Forest',source:'Spring ❄',desert:'Sun-cracked desert'}[t.base];
+  const rangeTxt=(t.struct==='canal'||t.struct==='dam')?(t.water?` ${t.struct==='dam'?'0':t.dist}/${MAX_REACH} from melt`:t.stale?` STALE — past ${MAX_REACH}, add 🚧 dam upstream!`:` DRY — not connected to water`):'';
+  const structName={
+    canal:t.water?`Canal — flowing blue 💧${rangeTxt}`:(t.stale?`Canal — STALE brown water 🟤${rangeTxt}`:`Canal — dry${rangeTxt}`),
+    dam:t.water?`Dam — BOOSTING 💧 (resets to 0/${MAX_REACH})`:(t.stale?`Dam — STALE (feed it within ${MAX_REACH})`:`Dam — DRY ⚠️ (feed it within ${MAX_REACH} to switch on)`),
+    farm:t.broken?`Farm — BROKEN 🐾 (mend: 4🪵)`:t.water?`Farm — watered 💧, stock ${t.fStock}`:'Farm — THIRSTY ⚠️ (needs BLUE water beside it)',
+    village:t.broken?`House — BROKEN 🐾 (mend: 4🪨)`:t.abandoned?`Abandoned house 🏚️ (empty)`:`${(t.level||0)>=4?'HIGH-RISE':(t.level||0)>0?`House Lv${t.level}`:'House'} — ${t.vPop}👪/${maxPop(t.level||0)}`,
+    lake:'Lake — reservoir 💧 (new 0/4 source)'}[t.struct]||'—';
+  let extra='';
+  if(!t.struct&&t.base==='tree')extra=t.job?`🌳 Being chopped — ~${Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000))}s to +2🪵!`:`A 🌳 tree — one 🪓 click, timber in 10s! (+2🪵)`;
+  else if(!t.struct&&t.base==='rock')extra=t.job?`⛏️ Mining… ~${Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000))}s left!`:((y===1||y===2)?'Rock barrier (rows 2–3) — one ⛏️ click, cleared in 15s, then dig canal!':'Rock — one ⛏️ click, cleared in 15s, then dig canal!');
+  else if(t.base==='source')extra='Spring water! Feeds 4 tiles — brown past 4, then needs a dam or lake.';
+  else if(t.base==='desert'&&!t.struct)extra='Cracked desert — no trees, but canals, farms and houses all work here!';
+  else if(!t.struct)extra='Good plain land. Build here.';
+  el.innerHTML=`<b>(${x},${y}) ${baseName}</b><br>${t.struct?structName:'Empty '+baseName.toLowerCase()+'.'}<br><span style="opacity:.7">${t.struct==='farm'?(t.broken?'🐾 Broken by wild animals! Mend with 🔨 (4🪵).':'Makes 1🌾 / 2 ticks if watered (brown N/A, max 5 stock). Needs 1👪 worker, feeds 5 — midday census!'):t.struct==='village'?(t.broken?'🐾 Broken! Mend with 🔨 (4🪨) to bring them home.':t.abandoned?'🏚️ Empty — settlers return at midday census once farms allow (1 farm feeds 5👪).':((t.level||0)>=4?'High-rise home: 24 max. Build MORE houses — goal is 250!':`Level ${t.level||0} home (+2👪 on build). Upgrade ×${4-(t.level||0)} more to high-rise 24! Midday census: unfed houses go abandoned!`+(wood>=6?' Ready to EXPAND!':''))):t.struct==='canal'?(t.stale?`Stale brown water — connected but past ${MAX_REACH} tiles. Chain a 🚧 dam upstream!`:`Carries snowmelt downhill. Dies after ${MAX_REACH} tiles (brown) — chain a 🚧 dam.`):t.struct==='dam'?'Booster: if fed blue water, resets canal range to 0/4 downstream. $30 on canal, $35 on grass.':extra}</span>`;
+}
+
+// ================= TOP-DOWN RENDERING =================
+function draw(){
+  flowPhase+=0.05;
+  // finish timed chop/mine jobs (real seconds) + desert greening
+  {
+    const nowMs=performance.now();
+    const dtG=Math.min(2,(nowMs-(lastGreenMs||nowMs))/1000);lastGreenMs=nowMs;
+    let anyJob=false, finished=false, greened=0;
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+      if(t.job){
+        if(nowMs>=t.job.doneAt){
+          if(t.job.kind==='chop'){const w=t.job.big?4:2;t.base='grass';t.bigTree=false;wood+=w;log(`🪓 Timber! @(${x},${y}) → +${w}🪵 wood (${wood} total).`);sfx(660,0.12,'sine',0.1);}
+          else{t.base='grass';stone+=2;log(`⛏️ Rock cleared @(${x},${y}) → +2🪨 stone (${stone} total). Dig your canal through.`);sfx(440,0.15,'square',0.1);}
+          t.job=null;finished=true;
+        } else anyJob=true;
+      }
+      // desert beside BLUE water greens up after 30s
+      if(t.base==='desert'&&!paused){
+        const wet=neighbors(x,y).some(([nx,ny])=>{const n=grid[ny][nx];return n.water&&(n.base==='source'||n.struct==='canal'||n.struct==='dam'||n.struct==='lake');});
+        if(wet){t.greenT+=dtG;if(t.greenT>=30){t.base='grass';t.greenT=0;greened++;}}
+        else t.greenT=0;
+      }
+    }
+    if(finished||greened>0){if(greened>0)log(`🌱 ${greened} desert tile${greened>1?'s':''} turned green beside the water!`);computeWater();updateHUD();}
+    else if(anyJob){const s=Math.floor(nowMs/1000);if(s!==hudSec){hudSec=s;updateHUD();}}
+  }
+  // backdrop
+  ctx.fillStyle='#0b1a2b';ctx.fillRect(0,0,cv.width,cv.height);
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x], px=x*TW, py=y*TH, cxp=px+TW/2, cyp=py+TH/2;
+    // ---- terrain ----
+    if(t.base==='source'){
+      const g=ctx.createLinearGradient(0,py,0,py+TH);
+      g.addColorStop(0,'#cfeeff');g.addColorStop(1,'#5aa7e0');
+      ctx.fillStyle=g;ctx.fillRect(px,py,TW,TH);
+    } else if(y===0){
+      ctx.fillStyle='#5d6b7d';ctx.fillRect(px,py,TW,TH); // high mountain
+      ctx.fillStyle='rgba(255,255,255,.75)';
+      if((x*7+y*13)%3===0){ctx.beginPath();ctx.arc(px+12,py+12,4,0,7);ctx.fill();}
+      if((x*5+y*11)%4===1){ctx.beginPath();ctx.arc(px+36,py+34,3,0,7);ctx.fill();}
+      ctx.fillStyle='rgba(0,0,0,.25)';ctx.fillRect(px,py+TH-6,TW,6); // slope shadow into row 1
+    } else if((y===1||y===2)&&t.base==='rock'){
+      ctx.fillStyle=((x+y)%2===0)?'#6e7683':'#656d7a';ctx.fillRect(px,py,TW,TH); // twin barrier: grey cracked rock
+      ctx.fillStyle='#7d8694';ctx.fillRect(px+3,py+3,TW-6,9);
+      ctx.strokeStyle='rgba(20,24,32,.55)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(px+8,py+18);ctx.lineTo(px+22,py+30);ctx.lineTo(px+16,py+44);ctx.stroke();
+      ctx.beginPath();ctx.moveTo(px+34,py+16);ctx.lineTo(px+30,py+32);ctx.lineTo(px+40,py+42);ctx.stroke();
+      if(t.job){ // mining in progress: cracks deepen + countdown
+        const left=Math.max(0,(t.job.doneAt-performance.now())/1000), frac=1-left/t.job.total;
+        ctx.strokeStyle=`rgba(255,200,80,${0.4+0.6*Math.min(1,frac)})`;ctx.lineWidth=2;
+        ctx.beginPath();ctx.moveTo(px+6,py+6);ctx.lineTo(px+TW-6,py+TH-6);ctx.moveTo(px+TW-6,py+6);ctx.lineTo(px+6,py+TH-6);ctx.stroke();
+        ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(px+8,py+TH-13,TW-16,5);
+        ctx.fillStyle='#fbbf24';ctx.fillRect(px+8,py+TH-13,(TW-16)*Math.min(1,frac),5);
+        pill(cxp,py+11,`⛏️ ${Math.ceil(left)}s`,9);
+      } else if(x%4===1){ctx.font='11px serif';ctx.textAlign='center';ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillText('⛏️',cxp,py+16);}
+    } else if(t.base==='rock'){
+      ctx.fillStyle=((x+y)%2===0)?'#57a55c':'#4f9c55';ctx.fillRect(px,py,TW,TH);
+      ctx.fillStyle='#7d8794';ctx.beginPath();ctx.arc(cxp,cyp,15,0,7);ctx.fill();
+      ctx.fillStyle='#9aa5b1';ctx.beginPath();ctx.arc(cxp-4,cyp-4,7,0,7);ctx.fill();
+      if(t.job){const left=Math.max(0,(t.job.doneAt-performance.now())/1000), frac=1-left/t.job.total;ctx.strokeStyle='rgba(255,200,80,.85)';ctx.lineWidth=2;ctx.beginPath();ctx.moveTo(px+10,py+10);ctx.lineTo(px+TW-10,py+TH-10);ctx.moveTo(px+TW-10,py+10);ctx.lineTo(px+10,py+TH-10);ctx.stroke();ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(px+8,py+TH-13,TW-16,5);ctx.fillStyle='#fbbf24';ctx.fillRect(px+8,py+TH-13,(TW-16)*Math.min(1,frac),5);pill(cxp,py+11,`⛏️ ${Math.ceil(left)}s`,9);}
+    } else if(t.base==='tree'){
+      if(level===2)ctx.fillStyle=((x+y)%2===0)?'#e9eef6':'#dde5f0';
+      else ctx.fillStyle=((x+y)%2===0)?'#4c9a52':'#459247';
+      ctx.fillRect(px,py,TW,TH);
+      const tsz=Math.round(Math.min(TW,TH)*(t.bigTree?1.15:0.62));
+      ctx.font=tsz+'px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('🌳',cxp,cyp-2);
+      if(t.job){
+        const left=Math.max(0,(t.job.doneAt-performance.now())/1000), frac=1-left/t.job.total;
+        ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(px+8,py+TH-13,TW-16,5);
+        ctx.fillStyle='#4ade80';ctx.fillRect(px+8,py+TH-13,(TW-16)*Math.min(1,frac),5);
+        pill(cxp,py+11,`🪓 ${Math.ceil(left)}s`,9);
+      }
+    } else if(t.base==='desert'){
+      ctx.fillStyle=((x+y)%2===0)?'#d9b77c':'#cfa96f';ctx.fillRect(px,py,TW,TH);
+      ctx.strokeStyle='rgba(120,85,40,.55)';ctx.lineWidth=1;
+      if((x*5+y*3)%3===0){ctx.beginPath();ctx.moveTo(px+8,py+10);ctx.lineTo(px+20,py+18);ctx.lineTo(px+32,py+12);ctx.stroke();}
+      if((x*7+y*5)%4===1){ctx.beginPath();ctx.moveTo(px+28,py+24);ctx.lineTo(px+38,py+32);ctx.stroke();}
+      if((x*3+y*11)%5===2){ctx.beginPath();ctx.moveTo(px+12,py+26);ctx.lineTo(px+18,py+36);ctx.stroke();}
+    } else if(level===2){
+      ctx.fillStyle=((x+y)%2===0)?'#e9eef6':'#dde5f0';ctx.fillRect(px,py,TW,TH);
+      ctx.fillStyle='rgba(150,180,220,.55)';
+      if((x*7+y*13)%4===0){ctx.beginPath();ctx.arc(px+12,py+12,2.5,0,7);ctx.fill();}
+      if((x*5+y*11)%3===1){ctx.beginPath();ctx.arc(px+34,py+28,2.5,0,7);ctx.fill();}
+    } else {
+      ctx.fillStyle=((x+y)%2===0)?'#57a35e':'#4f9c55';ctx.fillRect(px,py,TW,TH);
+    }
+
+    if(t.base==='source'){
+      ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+      ctx.fillText('⛰️',cxp,cyp-4);
+      ctx.font='12px serif';ctx.fillText('❄️',cxp+14,cyp-14);
+      ctx.fillStyle='rgba(255,255,255,'+(0.35+0.2*Math.sin(flowPhase*2+x))+')';
+      ctx.beginPath();ctx.ellipse(cxp,cyp+14,12,3.5,0,0,7);ctx.fill();
+      pill(cxp,py+TH-9,`spring 0/${MAX_REACH}`,9);
+    }
+
+    // ---- structures (blue water, NO white flow lines) ----
+    if(t.struct==='canal'||t.struct==='dam'){
+      const isDam=t.struct==='dam', m=7;
+      ctx.fillStyle=t.water?'#2aa7e0':t.stale?'#8a6a3b':'#9a7b4f';
+      ctx.beginPath();if(ctx.roundRect)ctx.roundRect(px+m,py+m,TW-2*m,TH-2*m,7);else ctx.rect(px+m,py+m,TW-2*m,TH-2*m);ctx.fill();
+      ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=2;ctx.stroke();
+      // joins: extend water to the tile edge wherever a canal joins a neighbor
+      const joinCol=t.water?'#2aa7e0':t.stale?'#8a6a3b':null;
+      if(joinCol){
+        ctx.fillStyle=joinCol;
+        const armH=TH-2*m, armW=TW-2*m;
+        const wet=(nx,ny)=>{if(!inB(nx,ny))return false;const n=grid[ny][nx];
+          if(n.base==='source'||n.struct==='lake')return true;
+          return (n.struct==='canal'||n.struct==='dam')&&(n.water||n.stale);};
+        if(wet(x+1,y))ctx.fillRect(cxp,cyp-armH/2,px+TW-cxp,armH);
+        if(wet(x-1,y))ctx.fillRect(px,cyp-armH/2,cxp-px,armH);
+        if(wet(x,y+1))ctx.fillRect(cxp-armW/2,cyp,armW,py+TH-cyp);
+        if(wet(x,y-1))ctx.fillRect(cxp-armW/2,py,armW,cyp-py);
+      }
+      if(t.water){
+        // subtle depth: darker blue rim light at downhill (south) edge only
+        ctx.fillStyle='rgba(0,40,80,.25)';ctx.fillRect(px+m,py+TH-m-5,TW-2*m,5);
+        if(isDam){
+          ctx.fillStyle='#6b4a2c';ctx.fillRect(px+8,cyp-5,TW-16,10);
+          ctx.fillStyle='#4a3018';for(let i=0;i<4;i++)ctx.fillRect(px+10+i*((TW-20)/4),cyp-8,3,5);
+          ctx.font='13px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',cxp,cyp-14);
+        }
+        ctx.fillStyle='rgba(4,25,45,.8)';ctx.font='bold 10px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText((isDam?'0':t.dist)+'/'+MAX_REACH,cxp,py+TH-9);
+        if(!isDam&&t.dist>=MAX_REACH-1){ctx.font='11px serif';ctx.fillText('🚧?',px+TW-11,py+12);}
+      } else if(t.stale){
+        // STALE: muddy brown water with bubbles, feeds nothing
+        ctx.fillStyle='rgba(60,35,10,.5)';
+        ctx.beginPath();ctx.arc(px+16,py+20,2.5,0,7);ctx.arc(px+32,py+30,2,0,7);ctx.arc(px+24,py+36,1.6,0,7);ctx.fill();
+        if(isDam){ctx.font='13px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',cxp,cyp-4);}
+        pill(cxp,py+TH-9,'stale!',9,'rgba(90,50,10,.85)');
+      } else {
+        ctx.fillStyle='#6b543a';ctx.font='13px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText(isDam?'🚧':'⋯',cxp,cyp);
+        if(isDam)pill(cxp,py+TH-9,'DRY',9);
+      }
+    }
+    if(t.struct==='farm'){
+      ctx.fillStyle=t.water?'#8bd450':'#a98a52';ctx.fillRect(px+5,py+5,TW-10,TH-10);
+      ctx.strokeStyle='#5b3f1d';ctx.lineWidth=1;
+      for(let i=1;i<4;i++){ctx.beginPath();ctx.moveTo(px+5,py+5+i*(TH-10)/4);ctx.lineTo(px+TW-5,py+5+i*(TH-10)/4);ctx.stroke();}
+      ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t.water?'🌾':'🥀',cxp,cyp-3);
+      if(t.fStock>0){ctx.fillStyle='#12300f';ctx.font='bold 11px sans-serif';ctx.fillText(t.fStock+'🌾',cxp,py+TH-8);}
+      if(!t.water&&!t.broken){ctx.font='13px serif';ctx.fillText('⚠️',px+TW-10,py+11);}
+      if(t.broken){
+        ctx.fillStyle='rgba(40,20,20,.5)';ctx.fillRect(px+5,py+5,TW-10,TH-10);
+        ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🐾',cxp,cyp-3);
+        pill(cxp,py+TH-9,'broken!',9,'rgba(120,20,20,.85)');
+      }
+    }
+    if(t.struct==='village'){
+      // 🏠 base + one stacked floor per level PLUS the first (same width, grows taller); Lv4 = high-rise
+      const lv=t.level||0, fw=24, fh=10, hiRise=lv>=4, floors=lv+1;
+      ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(cxp,cyp+14,15,5,0,0,7);ctx.fill();
+      // simple gabled starter: body, roof, two windows, door
+      ctx.fillStyle='#f3dfae';ctx.fillRect(cxp-12,cyp-4,24,16);
+      ctx.fillStyle='#a9713f';
+      ctx.beginPath();ctx.moveTo(cxp-14,cyp-4);ctx.lineTo(cxp,cyp-14);ctx.lineTo(cxp+14,cyp-4);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#7fb8e0';ctx.fillRect(cxp-10,cyp-1,6,6);ctx.fillRect(cxp+4,cyp-1,6,6);
+      ctx.fillStyle='#5b3a22';ctx.fillRect(cxp-3,cyp+4,6,8);
+      for(let f=1;f<=floors;f++){
+        const fy=cyp-14-(f-1)*fh;
+        ctx.fillStyle=hiRise?'#8fb4d6':(f%2?'#d9b978':'#e8c98f');
+        ctx.fillRect(cxp-fw/2,fy-fh,fw,fh);
+        ctx.fillStyle=hiRise?'#e8f4ff':'#5b3a22';
+        ctx.fillRect(cxp-8,fy-fh+2,5,5);ctx.fillRect(cxp+3,fy-fh+2,5,5);
+      }
+      {
+        const ry=cyp-14-floors*fh;
+        ctx.fillStyle=hiRise?'#3a5a78':'#a9713f';
+        ctx.beginPath();ctx.moveTo(cxp-fw/2-2,ry);ctx.lineTo(cxp,ry-8);ctx.lineTo(cxp+fw/2+2,ry);ctx.closePath();ctx.fill();
+      }
+      ctx.fillStyle='#3b2f1d';ctx.font='bold 11px sans-serif';ctx.textAlign='center';ctx.fillText(t.vPop+'👪',cxp,py+TH-8);
+      if(t.broken){
+        ctx.fillStyle='rgba(40,20,20,.5)';ctx.fillRect(cxp-14,cyp-12,28,24);
+        ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';        ctx.fillText('🐾',cxp,cyp+1);
+        pill(cxp,py+TH-9,'broken!',9,'rgba(120,20,20,.85)');
+      }
+      if(t.abandoned){
+        ctx.fillStyle='rgba(50,50,55,.5)';ctx.fillRect(cxp-14,cyp-12,28,24);
+        pill(cxp,py+TH-9,'empty',9,'rgba(60,60,70,.85)');
+      }
+    }
+    if(t.struct==='lake'){
+      const g=ctx.createLinearGradient(0,py,0,py+TH);g.addColorStop(0,'#7cc7f2');g.addColorStop(1,'#2f9fe0');
+      ctx.fillStyle=g;ctx.fillRect(px+1,py+1,TW-2,TH-2);
+      ctx.strokeStyle='rgba(180,220,255,.75)';ctx.lineWidth=1.5;
+      const wob=Math.sin(flowPhase*2+x+y)*2;
+      ctx.beginPath();ctx.ellipse(cxp,cyp-5,12,3,0,0,7);ctx.stroke();
+      ctx.beginPath();ctx.ellipse(cxp+2+wob,cyp+8,9,2.5,0,0,7);ctx.stroke();
+      ctx.strokeStyle='rgba(0,40,80,.35)';ctx.lineWidth=2;ctx.strokeRect(px+1,py+1,TW-2,TH-2);
+    }
+    // grid + selection
+    ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.strokeRect(px+.5,py+.5,TW-1,TH-1);
+    if(selected&&selected.x===x&&selected.y===y){ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(px+1.5,py+1.5,TW-3,TH-3);}
+  }
+  // bobbing red arrows where a dam is needed: end-of-reach canals + stale frontier
+  {
+    const bob=Math.sin(flowPhase*5)*4;let shown=0;
+    for(let y=0;y<ROWS&&shown<14;y++)for(let x=0;x<COLS&&shown<14;x++){
+      const t=grid[y][x];if(t.struct!=='canal'&&t.struct!=='dam')continue;
+      const needDam=(t.struct==='canal'&&t.water&&t.dist>=MAX_REACH-1)||
+        (t.stale&&neighbors(x,y).some(([nx,ny])=>grid[ny][nx].water));
+      if(!needDam)continue;shown++;
+      const px=x*TW, py=y*TH, cxp=px+TW/2, ay=py-10+bob;
+      ctx.fillStyle='#ef2b2b';ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;
+      ctx.beginPath();ctx.moveTo(cxp-8,ay-8);ctx.lineTo(cxp+8,ay-8);ctx.lineTo(cxp,ay+3);ctx.closePath();ctx.fill();ctx.stroke();
+    }
+  }
+  if(nightLeft>0){
+    ctx.fillStyle='rgba(6,8,30,.55)';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌙',cv.width/2,cv.height/2-16);
+    ctx.fillStyle='#dbe7ff';ctx.font='bold 20px sans-serif';ctx.fillText(`NIGHT ${day} — wave over beasts 20× to scare them!`,cv.width/2,cv.height/2+22);
+    ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    animals.forEach((a,i)=>{
+      const ax=(a.x+0.5)*TW+Math.sin(flowPhase*1.6+i*2.1)*9;
+      const ay=(a.y+0.5)*TH-8+Math.abs(Math.sin(flowPhase*2.2+i*1.3))*5;
+      const shake=a.scares>0?Math.sin(flowPhase*14+i)*Math.min(4,a.scares/5):0;
+      ctx.fillText(a.kind,ax+shake,ay);
+      pill(ax,ay-20,`${a.scares}/20`,10);
+    });
+  }
+  requestAnimationFrame(draw);
+}
+
+function posToTile(e){
+  const r=cv.getBoundingClientRect();
+  const cx=(e.touches&&e.touches[0]?e.touches[0].clientX:e.clientX), cy=(e.touches&&e.touches[0]?e.touches[0].clientY:e.clientY);
+  const x=Math.floor((cx-r.left)/r.width*COLS), y=Math.floor((cy-r.top)/r.height*ROWS);
+  return {x:Math.max(0,Math.min(COLS-1,x)),y:Math.max(0,Math.min(ROWS-1,y))};
+}
+cv.addEventListener('pointerdown',e=>{isDown=true;lastHit='';try{cv.setPointerCapture(e.pointerId);}catch(_){}const {x,y}=posToTile(e);tryBuild(x,y,false);});
+cv.addEventListener('pointermove',e=>{
+  // 🌙 night warding: wave over a beast's tile 20× to chase it off (saves the building)
+  if(nightLeft>0){
+    const {x,y}=posToTile(e), key=x+','+y;
+    if(key!==lastWard){
+      lastWard=key;
+      const a=animals.find(a=>a.x===x&&a.y===y);
+      if(a){
+        a.scares++;
+        if(a.scares>=20){
+          animals=animals.filter(o=>o!==a);
+          grid[y][x].broken=false;
+          updateHUD();sfx(1200,0.15,'square',0.08);setTimeout(()=>sfx(300,0.2,'square',0.07),110);
+          log(`🏃 ${a.kind} chased off @(${x},${y}) after 20 waves! Building saved — no mending needed.`);
+        } else sfx(200+a.scares*15,0.05,'square',0.04);
+      }
+    }
+  }
+  if(!isDown)return;if(tool!=='canal'&&tool!=='bulldoze'&&tool!=='chop'&&tool!=='mine')return;const {x,y}=posToTile(e);tryBuild(x,y,true);});
+window.addEventListener('pointerup',()=>{isDown=false;lastHit='';});
+cv.addEventListener('click',e=>{const {x,y}=posToTile(e);selected={x,y};renderInfo();});
+
+// tools UI
+const tdiv=document.getElementById('tools');
+TOOLS.forEach(t=>{
+  const b=document.createElement('button');b.className='tool'+(t.id===tool?' active':'');b.id='tool-'+t.id;
+  b.innerHTML=`<span class="ico">${t.ico}</span><span><b>${t.name} ${t.cost?'$'+t.cost:''}</b></span>`;
+  b.onclick=()=>{tool=t.id;document.querySelectorAll('.tool').forEach(el=>el.classList.remove('active'));b.classList.add('active');sfx(500,0.06,'square',0.05);showToolDesc();document.getElementById('hint').textContent=t.id==='canal'?'Drag DOWNHILL from the peak. Blue = good, brown = stale past 4 — add 🚧 dams!':t.desc;};
+  tdiv.appendChild(b);
+});
+function showToolDesc(){
+  const t=TOOLS.find(t=>t.id===tool);
+  if(t)document.getElementById('toolDesc').innerHTML=`<span style="font-size:16px">${t.ico}</span> <b>${t.name}${t.cost?' $'+t.cost:''}</b> — ${t.desc}`;
+}
+document.getElementById('bStart').onclick=()=>{document.getElementById('overlay').classList.add('hidden');sfx(660,0.15);renderTut();};
+document.getElementById('tutSkip').onclick=()=>{tut.done=true;renderTut();};
+document.getElementById('bHelp').onclick=()=>document.getElementById('overlay').classList.remove('hidden');
+document.getElementById('bNew').onclick=()=>{if(confirm('Start a new valley?'))newMap();};
+function setPaused(p){paused=p;
+  document.getElementById('bPause').classList.toggle('primary',p);
+  document.getElementById('bPlay').classList.toggle('primary',!p);}
+document.getElementById('bPause').onclick=()=>{setPaused(true);sfx(300,0.06,'square',0.05);};
+document.getElementById('bPlay').onclick=()=>{setPaused(false);sfx(500,0.06,'square',0.05);};
+document.getElementById('b1').onclick=e=>{speed=1;setSpeedBtn(e.target)};document.getElementById('b2').onclick=e=>{speed=2;setSpeedBtn(e.target)};document.getElementById('b3').onclick=e=>{speed=4;setSpeedBtn(e.target)};
+function setSpeedBtn(b){['b1','b2','b3'].forEach(id=>document.getElementById(id).classList.remove('primary'));b.classList.add('primary');setPaused(false);}
+
+newMap();draw();renderTut();showToolDesc();setPaused(false);
+let acc=0,last=performance.now();
+function loop(now){let dt=(now-last);last=now;if(!paused){acc+=dt*speed;money+=totalPop()*dt/1000*speed*0.5;if(now-lastRustle>12000&&treesExist){lastRustle=now;rustle();}while(acc>800){acc-=800;simTick();}}requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+
+// keyboard shortcuts 1-9, 0 (inspect is click-only)
+window.addEventListener('keydown',e=>{
+  const ids=['canal','dam','farm','village','expand','chop','mine','mend','lake','bulldoze','inspect'];
+  let i=e.key==='0'?9:parseInt(e.key)-1;
+  if(ids[i])document.getElementById('tool-'+ids[i]).click();
+});
+</script>
+</body>
+</html>
