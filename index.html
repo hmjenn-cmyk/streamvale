@@ -110,7 +110,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let TW=cv.width/COLS, TH=cv.height/ROWS;
 function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.measureText(txt).width+10;ctx.fillStyle=bg||'rgba(4,20,38,.78)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-w/2,cy-fs/2-3,w,fs+7,5);else ctx.rect(cx-w/2,cy-fs/2-3,w,fs+7);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
 
-let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false, damPromptShown=false;
+let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false, damPromptShown=false, firstNightDone=false;
 // ---- first-time tutorial: one prompt at a time until every block is used once ----
 const tut={canal:false,mine:false,farm:false,house:false,chop:false,expand:false,dam:false,lake:false,mend:false,done:false};
 const TUT_ORDER=['mine','canal','farm','house','chop','expand','dam','lake','mend'];
@@ -133,6 +133,8 @@ function renderTut(){
   const next=TUT_ORDER.find(k=>!tut[k]);
   if(!next){tut.done=true;box.classList.add('hidden');log('✅ Valley mastered! No more prompts — reach 150👪!');sfx(880,0.2,'sine',0.1);return;}
   box.classList.remove('hidden');
+  // mend tip waits until the first night has ended (nothing to mend before beasts strike)
+  if(next==='mend'&&!firstNightDone){document.getElementById('tutTxt').innerHTML=`🌙 Survive the first night — the 🔨 Mend tip unlocks at dawn…`;return;}
   // expand tip unlocks only after 5 houses stand
   if(next==='expand'){
     const h=houseCount();
@@ -232,7 +234,7 @@ function newMap(){
   for(let y=0;y<ROWS;y++){let row=[];for(let x=0;x<COLS;x++)row.push(blankTile(genBase(x,y)));grid.push(row);}
   // single spring: peak centre
   grid[0][Math.floor(COLS/2)]=blankTile('source');
-  money=180;food=10;wood=0;stone=0;day=1;tickInDay=0;totalTicks=0;won=false;selected=null;lastHit='';nightLeft=0;animals=[];paddlers=[];autoChopOn=false;damPromptShown=false;
+  money=180;food=10;wood=0;stone=0;day=1;tickInDay=0;totalTicks=0;won=false;selected=null;lastHit='';nightLeft=0;animals=[];paddlers=[];autoChopOn=false;damPromptShown=false;firstNightDone=false;
   // forests reclaim 80% of green squares
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.base==='grass'&&Math.random()<0.8)t.base='tree';}
   // 4×4 tree-free landing just below the spring
@@ -455,7 +457,7 @@ function tryBuild(x,y,isDrag){
 // simulation tick = 0.8s real (~6 game-minutes); 225 ticks = one 3-minute day
 function simTick(){
   totalTicks++;tickInDay++;
-  if(nightLeft>0){nightLeft--;if(nightLeft===0)document.getElementById('hint').textContent='☀️ Dawn breaks. Mend (🔨) what the beasts wrecked — farms 4🪵, houses 4🪨!';}
+  if(nightLeft>0){nightLeft--;if(nightLeft===0){document.getElementById('hint').textContent='☀️ Dawn breaks. Mend (🔨) what the beasts wrecked — farms 4🪵, houses 4🪨!';firstNightDone=true;renderTut();}}
   let harvests=0, workers=totalPop();
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
     const t=grid[y][x];
