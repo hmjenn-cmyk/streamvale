@@ -8,14 +8,14 @@
   :root{--bg:#0f1e2e;--panel:#162c44;--accent:#38bdf8;--green:#4ade80;--sand:#fbbf24}
   *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
   body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1e3a5f, var(--bg));color:#e8f1ff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
-  header{width:100%;max-width:1080px;padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  header{width:100%;max-width:1230px;padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
   h1{margin:0;font-size:22px;letter-spacing:.5px} h1 span{color:var(--accent)}
   #hud{display:flex;gap:8px;flex-wrap:wrap}
   #sMoney{font-size:22px!important}
   #transport{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
   .stat{background:var(--panel);border:1px solid #2a4a6b;border-radius:10px;padding:6px 12px;min-width:86px;text-align:center}
   .stat b{display:block;font-size:18px} .stat small{opacity:.7;font-size:11px;text-transform:uppercase}
-  #wrap{width:100%;max-width:1080px;display:grid;grid-template-columns:190px 1fr 240px;gap:12px;padding:10px 16px 20px}
+  #wrap{width:100%;max-width:1230px;display:grid;grid-template-columns:190px 1fr 240px;gap:12px;padding:10px 16px 20px}
   @media(max-width:900px){#wrap{grid-template-columns:1fr} }
   .card{background:var(--panel);border:1px solid #2a4a6b;border-radius:14px;padding:12px}
   .card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:1px;opacity:.8}
@@ -33,9 +33,11 @@
   #goalbar{height:10px;background:#0b1a2b;border-radius:99px;overflow:hidden;margin-top:6px}
   #goalfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .5s}
   #canvasHolder{position:relative}
-  #tut{position:fixed;right:14px;bottom:14px;background:rgba(6,20,38,.93);border:2px solid var(--accent);border-radius:12px;padding:10px 14px;max-width:330px;text-align:center;font-size:14px;z-index:50;pointer-events:none;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #tut{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(6,20,38,.93);border:2px solid var(--accent);border-radius:12px;padding:10px 14px;max-width:480px;text-align:center;font-size:17.5px;z-index:50;pointer-events:none;box-shadow:0 4px 24px rgba(0,0,0,.5)}
   #tut small{opacity:.65} #tut button{margin-top:6px;font-size:12px;pointer-events:auto}
   #farmAlert{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(60,12,12,.95);border:2px solid #f87171;border-radius:12px;padding:14px 18px;max-width:420px;text-align:center;font-size:20px;z-index:60;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #damAlert,#mendAlert{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(60,12,12,.95);border:2px solid #f87171;border-radius:12px;padding:14px 18px;max-width:420px;text-align:center;font-size:20px;z-index:60;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #farmAlert button,#damAlert button,#mendAlert button{font-size:16px;margin-top:8px}
   #overlay{position:fixed;inset:0;background:rgba(3,10,20,.82);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
   #overlay .box{max-width:560px;background:var(--panel);border:1px solid #2a4a6b;border-radius:16px;padding:24px}
   #overlay h2{margin-top:0} .kbd{background:#0b1a2b;border:1px solid #2a4a6b;border-radius:6px;padding:1px 6px}
@@ -75,7 +77,7 @@
   </div>
 
   <div class="card">
-    <div id="canvasHolder"><canvas id="cv" width="800" height="600"></canvas><div id="tut" class="hidden"><span id="tutTxt"></span><br><button id="tutSkip">Skip tutorial</button></div><div id="farmAlert" class="hidden"><span id="farmAlertTxt"></span><br><button id="farmAlertOk">OK — build farms!</button></div></div>
+    <div id="canvasHolder"><canvas id="cv" width="800" height="600"></canvas><div id="tut" class="hidden"><span id="tutTxt"></span><br><button id="tutSkip">Skip tutorial</button></div><div id="farmAlert" class="hidden"><span id="farmAlertTxt"></span><br><button id="farmAlertOk">OK — build farms!</button></div><div id="damAlert" class="hidden"><span id="damAlertTxt"></span><br><button id="damAlertOk">OK — build dams!</button></div><div id="mendAlert" class="hidden"><span id="mendAlertTxt"></span><br><button id="mendAlertOk">OK — mend!</button></div></div>
     <div id="toolbar2">
       <span id="hint" style="font-size:13px;opacity:.85">1 farm needs 1👷 + feeds 5👪 (midday census!). Green land only — desert greens in 30s by water. Far fields need a 🏞️ lake!</span>
     </div>
@@ -108,7 +110,7 @@ const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
 let TW=cv.width/COLS, TH=cv.height/ROWS;
 function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.measureText(txt).width+10;ctx.fillStyle=bg||'rgba(4,20,38,.78)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-w/2,cy-fs/2-3,w,fs+7,5);else ctx.rect(cx-w/2,cy-fs/2-3,w,fs+7);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
 
-let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false;
+let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false, damPromptShown=false;
 // ---- first-time tutorial: one prompt at a time until every block is used once ----
 const tut={canal:false,mine:false,farm:false,house:false,chop:false,expand:false,dam:false,lake:false,mend:false,done:false};
 const TUT_ORDER=['mine','canal','farm','house','chop','expand','dam','lake','mend'];
@@ -121,7 +123,7 @@ const TUT_TEXT={
  expand:'⑥ Expand a house 4× (🏘️, wood +2/level, money doubles $30→$240) — Lv4 high-rise holds 24!',
  dam:'⑦ Build a dam (🚧) to push blue water past 4 tiles.',
  lake:'⑧ Fields >10 rows out need a lake (🏞️ $500, 2×3).',
- mend:'⑨ Survive a 🌙 night — wave over each beast 20× to chase it off! Then mend (🔨): farms 4🪵, houses 4🪨.'};
+ mend:'⑨ Survive a 🌙 night — wave over each beast 15× to chase it off! Then mend (🔨): farms 4🪵, houses 4🪨.'};
 function tutDone(k){if(tut.done)return;if(!tut[k])tut[k]=true;renderTut();}
 function houseCount(){let h=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct==='village')h++;return h;}
 function renderTut(){
@@ -144,9 +146,9 @@ const TICKS_PER_DAY=225, NIGHT_TICKS=20; // 225 × 0.8s ticks = 3-minute days
 
 const TOOLS=[
  {id:'canal', ico:'🟦', name:'Dig canal', cost:5, desc:'Drag DOWNHILL. 4 max! Far fields need a 🏞️ lake.'},
- {id:'dam', ico:'🚧', name:'Dam', cost:35, desc:'On canal/grass. Resets range. Cost +50% every 8 dams!'},
- {id:'farm', ico:'🌾', name:'Farm', cost:25, desc:'GREEN land + BLUE water + 1👪 worker. Feeds 5. $25, +50% every 8!'},
- {id:'village', ico:'🏠', name:'House', cost:50, desc:'Green land only. Settle +2👪. $50, +50% every 8 owned!'},
+ {id:'dam', ico:'🚧', name:'Dam', cost:35, desc:'On canal/grass. Resets range. Cost +65% every 8 dams!'},
+ {id:'farm', ico:'🌾', name:'Farm', cost:25, desc:'GREEN land + BLUE water + 1👪 worker. Feeds 5. $25, +65% every 8!'},
+ {id:'village', ico:'🏠', name:'House', cost:50, desc:'Green land only. Settle +2👪. $50, +65% every 8 owned!'},
  {id:'expand', ico:'🏘️', name:'Expand house', cost:30, desc:'Money $ doubles/level ($30→$240). Wood +2/level. ×4 → 24!'},
  {id:'chop', ico:'🪓', name:'Chop trees', cost:0, desc:'1 click — 10s (big tree 20s, +4🪵).'},
  {id:'mine', ico:'⛏️', name:'Mine rock', cost:0, desc:'1 click per rock — 15s → +2🪨.'},
@@ -181,7 +183,7 @@ function currentGoal(){return 150;}
 function nightRate(){return level===2?0.3:0.2;}
 function maxPop(lv){return 12+3*lv;} // house levels 0..4 → max 12,15,18,21,24
 function structCount(s){let c=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct===s)c++;return c;}
-function priceMult(s){return 1+0.5*Math.floor(structCount(s)/8);} // money cost +50% per 8 owned
+function priceMult(s){return 1+0.65*Math.floor(structCount(s)/8);} // money cost +65% per 8 owned
 // groups of 5+ trees grow 1 BIG tree (same icon, 2× size, 20s chop, +4🪵)
 function makeBigTrees(){
   const seen=new Set();
@@ -230,7 +232,7 @@ function newMap(){
   for(let y=0;y<ROWS;y++){let row=[];for(let x=0;x<COLS;x++)row.push(blankTile(genBase(x,y)));grid.push(row);}
   // single spring: peak centre
   grid[0][Math.floor(COLS/2)]=blankTile('source');
-  money=180;food=10;wood=0;stone=0;day=1;tickInDay=0;totalTicks=0;won=false;selected=null;lastHit='';nightLeft=0;animals=[];paddlers=[];autoChopOn=false;
+  money=180;food=10;wood=0;stone=0;day=1;tickInDay=0;totalTicks=0;won=false;selected=null;lastHit='';nightLeft=0;animals=[];paddlers=[];autoChopOn=false;damPromptShown=false;
   // forests reclaim 80% of green squares
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.base==='grass'&&Math.random()<0.8)t.base='tree';}
   // 4×4 tree-free landing just below the spring
@@ -394,13 +396,13 @@ function tryBuild(x,y,isDrag){
     if(t.struct==='canal'){
       if(t.stale){log('⛔ That water is stale brown — dams need BLUE water within range!');sfx(140,0.15,'sawtooth',0.08);return;}
       const dUpCost=Math.round(30*priceMult('dam'));
-      if(money<dUpCost){log(`⛔ Dam upgrade costs $${dUpCost} (+50% every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      if(money<dUpCost){log(`⛔ Dam upgrade costs $${dUpCost} (+65% every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
       money-=dUpCost;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
       log(t.water?`🚧 Dam online at (${x},${y}) — pressure reset, +${MAX_REACH} tiles!`:`🚧 Dam built at (${x},${y}) but DRY — it must be within ${MAX_REACH} of water to turn on.`);
     } else if(t.struct===null&&(t.base==='grass'||t.base==='desert')){
       if(rowsFromWater(y)>10){log('⛔ Too far from spring water (>10 rows)! Build a 🏞️ lake ($100, 2×3) out here first.');sfx(140,0.15,'sawtooth',0.08);return;}
       const dNewCost=Math.round(35*priceMult('dam'));
-      if(money<dNewCost){log(`⛔ Dam costs $${dNewCost} here (+50% every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      if(money<dNewCost){log(`⛔ Dam costs $${dNewCost} here (+65% every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
       money-=dNewCost;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
       log(t.water?`🚧 Dam + canal built at (${x},${y}) — pressure reset!`:`🚧 Dam built at (${x},${y}) but DRY — connect it within ${MAX_REACH} tiles of water.`);
     } else {log('⛔ Dams go on empty grass or an existing canal.');sfx(140,0.15,'sawtooth',0.08);return;}
@@ -409,13 +411,13 @@ function tryBuild(x,y,isDrag){
   if(tool==='farm'){
     if(t.base!=='grass'||t.struct!==null){log('⛔ Farms go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
     const fCost=Math.round(25*priceMult('farm'));
-    if(money<fCost){log(`⛔ Farm costs $${fCost} (+50% every 8 farms).`);sfx(140,0.15,'sawtooth',0.08);return;}
+    if(money<fCost){log(`⛔ Farm costs $${fCost} (+65% every 8 farms).`);sfx(140,0.15,'sawtooth',0.08);return;}
     money-=fCost;t.struct='farm';t.fProg=0;t.fStock=0;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('farm');log(`🌾 Farm built at (${x},${y}). Needs BLUE water + 1👪 worker, feeds 5!`);
   }
   if(tool==='village'){
     if(t.base!=='grass'||t.struct!==null){log('⛔ Houses go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
     const hCost=Math.round(50*priceMult('village'));
-    if(money<hCost){log(`⛔ House costs $${hCost} (+50% every 8 houses — ${structCount('village')} standing).`);sfx(140,0.15,'sawtooth',0.08);return;}
+    if(money<hCost){log(`⛔ House costs $${hCost} (+65% every 8 houses — ${structCount('village')} standing).`);sfx(140,0.15,'sawtooth',0.08);return;}
     money-=hCost;t.struct='village';t.level=0;t.vPop=2;t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
   }
   if(tool==='mend'){
@@ -501,6 +503,15 @@ function simTick(){
     if(paddlers.length>want)paddlers.length=want;
     if(paddlers.length<want){const w=waterTiles();if(w.length){const [sx,sy]=w[(Math.random()*w.length)|0];paddlers.push({x:sx,y:sy,tx:sx,ty:sy,vx:1,vy:0});}}
   }
+  // 🚧 first-dam prompt (farm-alarm style, once per valley)
+  if(!damPromptShown){
+    let need=false;
+    for(let y=0;y<ROWS&&!need;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+      if((t.struct==='canal'||t.struct==='dam')&&(t.stale||(t.water&&t.dist>=MAX_REACH))){need=true;break;}}
+    if(need){damPromptShown=true;
+      document.getElementById('damAlertTxt').innerHTML=`🚧 <b>A dam is needed!</b><br>Water runs brown past 4 tiles — upgrade a <b>4/4 canal</b> (🚧) to push blue water further!`;
+      document.getElementById('damAlert').classList.remove('hidden');sfx(440,0.2,'square',0.08);}
+  }
   if(tickInDay>=TICKS_PER_DAY){
     tickInDay=0;day++;
     const pop=totalPop();
@@ -527,19 +538,25 @@ function simTick(){
       const hit=pool.slice(0,Math.ceil(pool.length*nightRate()));
       hit.forEach(([x,y])=>{grid[y][x].broken=true;});
       animals=hit.map(([x,y],i)=>({x,y,kind:i%2?'🐻':'🐺',scares:0}));lastWard='';
-      document.getElementById('hint').textContent='🌙 Wave your mouse VIGOROUSLY over each beast 20× to chase it off and save the building!';
-      if(hit.length)log(`🌙 Night falls (Day ${day}): wolves & bears broke ${hit.length} outer building${hit.length>1?'s':''} (🐾)! Mend: farms 4🪵, houses 4🪨.`);
+      document.getElementById('hint').textContent='🌙 Wave your mouse VIGOROUSLY over each beast 15× to chase it off and save the building!';
+      if(hit.length){log(`🌙 Night falls (Day ${day}): wolves & bears broke ${hit.length} outer building${hit.length>1?'s':''} (🐾)! Mend: farms 4🪵, houses 4🪨.`);
+        document.getElementById('mendAlertTxt').innerHTML=`🐾 <b>Beasts broke ${hit.length} building${hit.length>1?'s':''}!</b><br>Grab the 🔨 Mend tool — farms cost 4🪵, houses 4🪨.`;
+        document.getElementById('mendAlert').classList.remove('hidden');}
       else log(`🌙 Night falls (Day ${day}): all quiet — no buildings to raid.`);
     }
     if(day%3===0)expandGrid();
     else log(`🗺️ Valley expansion in ${3-day%3} day${3-day%3>1?'s':''} (every 3rd dawn).`);
     regrowTrees();
     makeBigTrees();
-    if(totalPop()>=currentGoal()&&!won){won=true;sfx(523,0.4,'sine',0.12);setTimeout(()=>sfx(784,0.5,'sine',0.12),200);
-      document.getElementById('overlay').classList.remove('hidden');
-      document.getElementById('overlayBox').innerHTML=`<h2>congratulations!</h2><p>You reached <b>${totalPop()} people</b>! Keep playing 'grassy plains', or advance to level 2 'snowy tundra'?</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="document.getElementById('overlay').classList.add('hidden')">Keep playing 'grassy plains'</button><button onclick="advanceLevel()">Advance to level 2 'snowy tundra'</button></div>`;}
   }
   computeWater();updateHUD();
+}
+
+function checkWin(){
+  if(won||!grid||!grid.length)return;
+  if(totalPop()>=currentGoal()){won=true;sfx(523,0.4,'sine',0.12);setTimeout(()=>sfx(784,0.5,'sine',0.12),200);
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('overlayBox').innerHTML=`<h2>congratulations!</h2><p>You reached <b>${totalPop()} people</b>! Keep playing 'grassy plains', or advance to level 2 'snowy tundra'?</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="document.getElementById('overlay').classList.add('hidden')">Keep playing 'grassy plains'</button><button onclick="advanceLevel()">Advance to level 2 'snowy tundra'</button></div>`;}
 }
 
 function updateHUD(){
@@ -555,6 +572,7 @@ function updateHUD(){
   document.getElementById('sLevelName').textContent=level===2?'🗺️ Snowy Tundra':'🗺️ Grassy Plains';
   document.getElementById('goalTxt').textContent=`(${totalPop()}/${currentGoal()})`;
   document.getElementById('goalfill').style.width=Math.min(100,totalPop()/currentGoal()*100)+'%';
+  checkWin();
   document.getElementById('sMoney').style.color=money<20?'#f87171':'#fde047';
   document.getElementById('sFood').style.color=food<=2?'#f87171':'#fff';
   refreshToolPrices();showToolDesc();
@@ -837,14 +855,16 @@ function draw(){
   if(nightLeft>0){
     ctx.fillStyle='rgba(6,8,30,.55)';ctx.fillRect(0,0,cv.width,cv.height);
     ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌙',cv.width/2,cv.height/2-16);
-    ctx.fillStyle='#dbe7ff';ctx.font='bold 20px sans-serif';ctx.fillText(`NIGHT ${day} — wave over beasts 20× to scare them!`,cv.width/2,cv.height/2+22);
+    ctx.fillStyle='#dbe7ff';ctx.font='bold 20px sans-serif';ctx.fillText(`NIGHT ${day} — wave over beasts 15× to scare them!`,cv.width/2,cv.height/2+22);
     ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
     animals.forEach((a,i)=>{
       const ax=(a.x+0.5)*TW+Math.sin(flowPhase*1.6+i*2.1)*9;
       const ay=(a.y+0.5)*TH-8+Math.abs(Math.sin(flowPhase*2.2+i*1.3))*5;
       const shake=a.scares>0?Math.sin(flowPhase*14+i)*Math.min(4,a.scares/5):0;
       ctx.fillText(a.kind,ax+shake,ay);
-      pill(ax,ay-20,`${a.scares}/20`,10);
+      const bw=34, bfrac=Math.max(0,1-a.scares/15);
+      ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(ax-bw/2,ay-22,bw,5);
+      ctx.fillStyle='#ef2b2b';ctx.fillRect(ax-bw/2,ay-22,bw*bfrac,5);
     });
   }
   if(paused){
@@ -871,11 +891,11 @@ cv.addEventListener('pointermove',e=>{
       const a=animals.find(a=>a.x===x&&a.y===y);
       if(a){
         a.scares++;
-        if(a.scares>=20){
+        if(a.scares>=15){
           animals=animals.filter(o=>o!==a);
           grid[y][x].broken=false;
           updateHUD();sfx(1200,0.15,'square',0.08);setTimeout(()=>sfx(300,0.2,'square',0.07),110);
-          log(`🏃 ${a.kind} chased off @(${x},${y}) after 20 waves! Building saved — no mending needed.`);
+          log(`🏃 ${a.kind} chased off @(${x},${y}) after 15 waves! Building saved — no mending needed.`);
         } else sfx(200+a.scares*15,0.05,'square',0.04);
       }
     }
@@ -909,6 +929,8 @@ function refreshToolPrices(){
 document.getElementById('bStart').onclick=()=>{document.getElementById('overlay').classList.add('hidden');sfx(660,0.15);renderTut();};
 document.getElementById('tutSkip').onclick=()=>{tut.done=true;renderTut();};
 document.getElementById('farmAlertOk').onclick=()=>{document.getElementById('farmAlert').classList.add('hidden');};
+document.getElementById('damAlertOk').onclick=()=>{document.getElementById('damAlert').classList.add('hidden');};
+document.getElementById('mendAlertOk').onclick=()=>{document.getElementById('mendAlert').classList.add('hidden');};
 document.getElementById('bHelp').onclick=()=>document.getElementById('overlay').classList.remove('hidden');
 document.getElementById('bNew').onclick=()=>{if(confirm('Start a new valley?'))newMap();};
 function setPaused(p){paused=p;
