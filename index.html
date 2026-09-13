@@ -39,6 +39,7 @@
   #canvasHolder{position:relative}
   #tut{position:fixed;right:14px;bottom:14px;background:rgba(6,20,38,.93);border:2px solid var(--accent);border-radius:12px;padding:10px 14px;max-width:330px;text-align:center;font-size:14px;z-index:50;pointer-events:none;box-shadow:0 4px 24px rgba(0,0,0,.5)}
   #tut small{opacity:.65} #tut button{margin-top:6px;font-size:12px;pointer-events:auto}
+  #farmAlert{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(60,12,12,.95);border:2px solid #f87171;border-radius:12px;padding:14px 18px;max-width:420px;text-align:center;font-size:20px;z-index:60;box-shadow:0 4px 24px rgba(0,0,0,.5)}
   #overlay{position:fixed;inset:0;background:rgba(3,10,20,.82);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
   #overlay .box{max-width:560px;background:var(--panel);border:1px solid #2a4a6b;border-radius:16px;padding:24px}
   #overlay h2{margin-top:0} .kbd{background:#0b1a2b;border:1px solid #2a4a6b;border-radius:6px;padding:1px 6px}
@@ -78,12 +79,12 @@
   </div>
 
   <div class="card">
-    <div id="canvasHolder"><canvas id="cv" width="800" height="600"></canvas><div id="tut" class="hidden"><span id="tutTxt"></span><br><button id="tutSkip">Skip tutorial</button></div></div>
+    <div id="canvasHolder"><canvas id="cv" width="800" height="600"></canvas><div id="tut" class="hidden"><span id="tutTxt"></span><br><button id="tutSkip">Skip tutorial</button></div><div id="farmAlert" class="hidden"><span id="farmAlertTxt"></span><br><button id="farmAlertOk">OK — build farms!</button></div></div>
     <div id="toolbar2">
       <span id="hint" style="font-size:13px;opacity:.85">1 farm needs 1👷 + feeds 5👪 (midday census!). Green land only — desert greens in 30s by water. Far fields need a 🏞️ lake!</span>
     </div>
     <div class="card goalcard" style="margin-top:10px;padding:8px">
-      <div style="font-size:13px">🎯 Overall goal: <b>250👪</b> <span id="goalTxt">(0/250)</span></div>
+      <div style="font-size:13px">🎯 Overall goal: <b>150👪</b> <span id="goalTxt">(0/150)</span></div>
       <div id="goalbar"><div id="goalfill"></div></div>
       <div id="toolDesc" style="font-size:13px;margin-top:6px;opacity:.92"></div>
     </div>
@@ -114,16 +115,16 @@ function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.me
 let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false;
 // ---- first-time tutorial: one prompt at a time until every block is used once ----
 const tut={canal:false,mine:false,farm:false,house:false,chop:false,expand:false,dam:false,lake:false,mend:false,done:false};
-const TUT_ORDER=['canal','mine','farm','house','chop','expand','dam','lake','mend'];
+const TUT_ORDER=['mine','canal','farm','house','chop','expand','dam','lake','mend'];
 const TUT_TEXT={
- canal:'① Dig a canal DOWNHILL from a spring — pick 🟦 and drag on grass.',
- mine:'② Blast the twin rock rows (2–3) — pick ⛏️, 1 click per rock (15s → +2🪨).',
+ mine:'① Mine the 2 flashing 🟨 rocks to free the spring — pick ⛏️ (15s, +2🪨 each).',
+ canal:'② Dig a canal DOWNHILL from the spring — pick 🟦 and drag on grass.',
  farm:'③ Build a farm (🌾 $25) on GREEN land beside BLUE water.',
  house:'④ Build a house (🏠 $50) on green land — settles +2👪.',
  chop:'⑤ Chop a tree (🪓) — 1 click, timber in 10s (+2🪵, big trees 20s/+4🪵).',
- expand:'⑥ Expand a house 4× (🏘️, costs climb 6🪵$30 → 12🪵$60) — Lv4 high-rise holds 24!',
+ expand:'⑥ Expand a house 4× (🏘️, wood +2/level, money doubles $30→$240) — Lv4 high-rise holds 24!',
  dam:'⑦ Build a dam (🚧) to push blue water past 4 tiles.',
- lake:'⑧ Fields >10 rows out need a lake (🏞️ $100, 2×3).',
+ lake:'⑧ Fields >10 rows out need a lake (🏞️ $500, 2×3).',
  mend:'⑨ Survive a 🌙 night — wave over each beast 20× to chase it off! Then mend (🔨): farms 4🪵, houses 4🪨.'};
 function tutDone(k){if(tut.done)return;if(!tut[k])tut[k]=true;renderTut();}
 function houseCount(){let h=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct==='village')h++;return h;}
@@ -132,7 +133,7 @@ function renderTut(){
   if(!box)return;
   if(tut.done){box.classList.add('hidden');return;}
   const next=TUT_ORDER.find(k=>!tut[k]);
-  if(!next){tut.done=true;box.classList.add('hidden');log('✅ Valley mastered! No more prompts — reach 250👪!');sfx(880,0.2,'sine',0.1);return;}
+  if(!next){tut.done=true;box.classList.add('hidden');log('✅ Valley mastered! No more prompts — reach 150👪!');sfx(880,0.2,'sine',0.1);return;}
   box.classList.remove('hidden');
   // expand tip unlocks only after 5 houses stand
   if(next==='expand'){
@@ -147,14 +148,14 @@ const TICKS_PER_DAY=225, NIGHT_TICKS=20; // 225 × 0.8s ticks = 3-minute days
 
 const TOOLS=[
  {id:'canal', ico:'🟦', name:'Dig canal', cost:5, desc:'Drag DOWNHILL. 4 max! Far fields need a 🏞️ lake.'},
- {id:'dam', ico:'🚧', name:'Dam', cost:35, desc:'On canal/grass. Resets 4-tile range.'},
- {id:'farm', ico:'🌾', name:'Farm', cost:25, desc:'GREEN land + BLUE water + 1👪 worker. Feeds 5.'},
- {id:'village', ico:'🏠', name:'House', cost:50, desc:'Green land only. Settle +2👪. Max 12, expand ×2!'},
- {id:'expand', ico:'🏘️', name:'Expand house', cost:30, desc:'Cost climbs per level (6🪵$30 → 12🪵$60). ×4 → high-rise 24!'},
+ {id:'dam', ico:'🚧', name:'Dam', cost:35, desc:'On canal/grass. Resets range. Cost ×2 every 8 dams!'},
+ {id:'farm', ico:'🌾', name:'Farm', cost:25, desc:'GREEN land + BLUE water + 1👪 worker. Feeds 5. $25, ×2 every 8!'},
+ {id:'village', ico:'🏠', name:'House', cost:50, desc:'Green land only. Settle +2👪. $50, ×2 every 8 owned!'},
+ {id:'expand', ico:'🏘️', name:'Expand house', cost:30, desc:'Money $ doubles/level ($30→$240). Wood +2/level. ×4 → 24!'},
  {id:'chop', ico:'🪓', name:'Chop trees', cost:0, desc:'1 click — 10s (big tree 20s, +4🪵).'},
  {id:'mine', ico:'⛏️', name:'Mine rock', cost:0, desc:'1 click per rock — 15s → +2🪨.'},
  {id:'mend', ico:'🔨', name:'Mend', cost:0, desc:'Fix farm 4🪵, house 4🪨.'},
- {id:'lake', ico:'🏞️', name:'Lake', cost:100, desc:'2×3 reservoir. Waters 4 around it.'},
+ {id:'lake', ico:'🏞️', name:'Lake', cost:500, desc:'2×3 reservoir. Waters 4 around it.'},
  {id:'bulldoze', ico:'🧹', name:'Bulldoze', cost:0, desc:'Remove canal/dam/building. 50% refund.'},
  {id:'inspect', ico:'🔍', name:'Inspect', cost:0, desc:'Click to learn about a tile.'},
 ];
@@ -180,9 +181,11 @@ function genBase(x,y){
   if(r<0.05+treeP)return 'tree';
   return 'grass';
 }
-function currentGoal(){return 250;}
+function currentGoal(){return 150;}
 function nightRate(){return level===2?0.3:0.2;}
 function maxPop(lv){return 12+3*lv;} // house levels 0..4 → max 12,15,18,21,24
+function structCount(s){let c=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct===s)c++;return c;}
+function priceMult(s){return Math.pow(2,Math.floor(structCount(s)/8));} // money cost doubles every 8 owned
 // groups of 5+ trees grow 1 BIG tree (same icon, 2× size, 20s chop, +4🪵)
 function makeBigTrees(){
   const seen=new Set();
@@ -235,7 +238,7 @@ function newMap(){
   // forests reclaim 80% of green squares
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.base==='grass'&&Math.random()<0.8)t.base='tree';}
   makeBigTrees();
-  log(`Level ${level} — ${level===2?'Snowy Tundra':'Grassy Plains'}! One peak spring. Goal: 250👪. Mine the twin rock rows (2–3)!`);
+  log(`Level ${level} — ${level===2?'Snowy Tundra':'Grassy Plains'}! One peak spring. Goal: 150👪. Mine the twin rock rows (2–3)!`);
   computeWater();updateHUD();
 }
 
@@ -335,6 +338,7 @@ function tryBuild(x,y,isDrag){
   if(tool==='canal'){
     if(t.base==='source'){if(!isDrag){log('⛔ Spring itself already flows. Dig downhill from it.');sfx(140,0.15,'sawtooth',0.08);}return;}
     if(t.base==='rock'){if(!isDrag){log('⛔ Solid rock! Mine it first (⛏️, 1 click, 15s), then dig.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.base==='tree'&&nightLeft>0){if(!isDrag){log('🌙 No clearing trees at night!');sfx(140,0.15,'sawtooth',0.08);}return;}
     if(t.struct!==null){return;}
     if(t.job){if(!isDrag)log('⛔ Work in progress here — wait for the timer!');return;}
     // far fields (>10 rows from spring/lake water) need a lake first
@@ -346,6 +350,7 @@ function tryBuild(x,y,isDrag){
     return;
   }
   if(tool==='chop'){
+    if(nightLeft>0){if(!isDrag)log('🌙 No chopping at night — crews rest till dawn!');return;}
     if(!(t.base==='tree'&&t.struct===null)){if(!isDrag){log(t.struct!==null?'⛔ Chop is for standing 🌳 trees — clear buildings with 🧹.':'⛔ No tree here. Forests crowd the mountain slopes!');sfx(140,0.15,'sawtooth',0.08);}return;}
     if(t.job){if(!isDrag){const s=Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000));log(`⏳ Already chopping @(${x},${y}) — ${s}s left.`);}return;}
     if(!countHit(x,y,isDrag))return;
@@ -355,6 +360,7 @@ function tryBuild(x,y,isDrag){
     selected={x,y};renderInfo();return;
   }
   if(tool==='mine'){
+    if(nightLeft>0){if(!isDrag)log('🌙 No mining at night — crews rest till dawn!');return;}
     if(!(t.base==='rock'&&t.struct===null)){if(!isDrag){log(t.base==='source'?'⛔ The spring needs no mining.':'⛔ Nothing to mine — aim at grey barrier rock (rows 2–3).');sfx(140,0.15,'sawtooth',0.08);}return;}
     if(t.job){if(!isDrag){const s=Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000));log(`⏳ Already mining @(${x},${y}) — ${s}s left.`);}return;}
     if(!countHit(x,y,isDrag))return;
@@ -368,9 +374,10 @@ function tryBuild(x,y,isDrag){
     if(t.struct==='village'&&(t.level||0)<4){
       if(t.broken){log('⛔ Mend it first (🔨: 4🪨)!');sfx(140,0.15,'sawtooth',0.08);return;}
       if(t.abandoned){log('🏚️ Abandoned — settlers return at midday census once farms allow!');sfx(140,0.15,'sawtooth',0.08);return;}
-      if(wood<6+2*t.level){log(`⛔ Level ${t.level+1} needs ${6+2*t.level}🪵 (have ${wood}).`);sfx(140,0.15,'sawtooth',0.08);return;}
-      if(money<30+10*t.level){log(`⛔ Level ${t.level+1} also needs $${30+10*t.level}.`);sfx(140,0.15,'sawtooth',0.08);return;}
-      wood-=6+2*t.level;money-=30+10*t.level;t.level=(t.level||0)+1;
+      const wNeed=6+2*(t.level||0), mNeed=30*Math.pow(2,t.level||0);
+      if(wood<wNeed){log(`⛔ Level ${t.level+1} needs ${wNeed}🪵 (have ${wood}).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      if(money<mNeed){log(`⛔ Level ${t.level+1} also needs $${mNeed}.`);sfx(140,0.15,'sawtooth',0.08);return;}
+      wood-=wNeed;money-=mNeed;t.level=(t.level||0)+1;
       const before=t.vPop||2;t.vPop=Math.min(maxPop(t.level),before*2);
       computeWater();updateHUD();sfx(523,0.15,'sine',0.1);setTimeout(()=>sfx(784,0.2,'sine',0.1),120);
       log(t.level>=4?`🏙️ HIGH-RISE @(${x},${y})! ${before}→${t.vPop}👪 — max level, 24 max!`:`🏘️ House @(${x},${y}) → level ${t.level}! ${before}→${t.vPop}👪 (max ${maxPop(t.level)}).`);tutDone('expand');
@@ -383,26 +390,31 @@ function tryBuild(x,y,isDrag){
     if(t.base==='rock'){log('⛔ Solid rock! Mine it (⛏️) first.');sfx(140,0.15,'sawtooth',0.08);return;}
     if(t.struct==='dam'){log('Already a dam here.');return;}
     if(t.struct==='canal'){
-      if(money<30){log('⛔ Dam upgrade needs $30.');sfx(140,0.15,'sawtooth',0.08);return;}
-      money-=30;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
+      if(t.stale){log('⛔ That water is stale brown — dams need BLUE water within range!');sfx(140,0.15,'sawtooth',0.08);return;}
+      const dUpCost=30*priceMult('dam');
+      if(money<dUpCost){log(`⛔ Dam upgrade costs $${dUpCost} (×2 every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      money-=dUpCost;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
       log(t.water?`🚧 Dam online at (${x},${y}) — pressure reset, +${MAX_REACH} tiles!`:`🚧 Dam built at (${x},${y}) but DRY — it must be within ${MAX_REACH} of water to turn on.`);
     } else if(t.struct===null&&(t.base==='grass'||t.base==='desert')){
       if(rowsFromWater(y)>10){log('⛔ Too far from spring water (>10 rows)! Build a 🏞️ lake ($100, 2×3) out here first.');sfx(140,0.15,'sawtooth',0.08);return;}
-      if(money<35){log('⛔ Dam needs $35 ($30 on existing canal).');sfx(140,0.15,'sawtooth',0.08);return;}
-      money-=35;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
+      const dNewCost=35*priceMult('dam');
+      if(money<dNewCost){log(`⛔ Dam costs $${dNewCost} here (×2 every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      money-=dNewCost;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
       log(t.water?`🚧 Dam + canal built at (${x},${y}) — pressure reset!`:`🚧 Dam built at (${x},${y}) but DRY — connect it within ${MAX_REACH} tiles of water.`);
     } else {log('⛔ Dams go on empty grass or an existing canal.');sfx(140,0.15,'sawtooth',0.08);return;}
     selected={x,y};renderInfo();return;
   }
   if(tool==='farm'){
     if(t.base!=='grass'||t.struct!==null){log('⛔ Farms go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
-    if(money<25){log('⛔ Need $25 for farm.');sfx(140,0.15,'sawtooth',0.08);return;}
-    money-=25;t.struct='farm';t.fProg=0;t.fStock=0;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('farm');log(`🌾 Farm built at (${x},${y}). Needs BLUE water + 1👪 worker, feeds 5!`);
+    const fCost=25*priceMult('farm');
+    if(money<fCost){log(`⛔ Farm costs $${fCost} (×2 every 8 farms).`);sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=fCost;t.struct='farm';t.fProg=0;t.fStock=0;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('farm');log(`🌾 Farm built at (${x},${y}). Needs BLUE water + 1👪 worker, feeds 5!`);
   }
   if(tool==='village'){
     if(t.base!=='grass'||t.struct!==null){log('⛔ Houses go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
-    if(money<50){log('⛔ Need $50 for house.');sfx(140,0.15,'sawtooth',0.08);return;}
-    money-=50;t.struct='village';t.level=0;t.vPop=2;t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
+    const hCost=50*priceMult('village');
+    if(money<hCost){log(`⛔ House costs $${hCost} (×2 every 8 houses — ${structCount('village')} standing).`);sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=hCost;t.struct='village';t.level=0;t.vPop=2;t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
   }
   if(tool==='mend'){
     if((t.struct==='farm'||t.struct==='village')&&t.broken){
@@ -427,8 +439,8 @@ function tryBuild(x,y,isDrag){
       cells.push([nx,ny]);
     }
     if(!ok){log('⛔ '+why);sfx(140,0.15,'sawtooth',0.08);return;}
-    if(money<100){log('⛔ Lake costs $100.');sfx(140,0.15,'sawtooth',0.08);return;}
-    money-=100;cells.forEach(([nx,ny])=>{grid[ny][nx].struct='lake';});
+    if(money<500){log('⛔ Lake costs $500.');sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=500;cells.forEach(([nx,ny])=>{grid[ny][nx].struct='lake';});
     computeWater();updateHUD();sfx(330,0.25,'sine',0.1);tutDone('lake');
     log(`🏞️ Lake built @(${x},${y})! Reservoir waters 4 tiles around it.`);
     selected={x,y};renderInfo();return;
@@ -459,8 +471,12 @@ function simTick(){
       let bx=-1,by=-1,best=0;
       for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
         if(t.struct==='village'&&!t.broken&&!t.abandoned&&t.vPop>best){best=t.vPop;bx=x;by=y;}}
-      if(best>0){grid[by][bx].vPop=0;grid[by][bx].abandoned=true;updateHUD();sfx(196,0.4,'sawtooth',0.06);log(`🏚️ House @(${bx},${by}) ABANDONED! ${F} farm${F===1?'':'s'} feed ${F*5}👪 but the valley holds ${P}. Build more farms!`);}
-      else log('⚠️ Starving valley — not enough farms, and no inhabited houses left!');
+      if(best>0){grid[by][bx].vPop=0;grid[by][bx].abandoned=true;updateHUD();sfx(196,0.4,'sawtooth',0.06);log(`🏚️ House @(${bx},${by}) ABANDONED! ${F} farm${F===1?'':'s'} feed ${F*5}👪 but the valley holds ${P}. Build more farms!`);
+        document.getElementById('farmAlertTxt').innerHTML=`⚠️ <b>More farms needed!</b><br>${F} farm${F===1?'':'s'} feed${F===1?'s':''} ${F*5}👪 but the valley holds ${P} — a house was abandoned!`;
+        document.getElementById('farmAlert').classList.remove('hidden');}
+      else{log('⚠️ Starving valley — not enough farms, and no inhabited houses left!');
+        document.getElementById('farmAlertTxt').innerHTML=`⚠️ <b>More farms needed!</b><br>${F} farm${F===1?'':'s'} feed${F===1?'s':''} ${F*5}👪 but the valley holds ${P} — build farms now!`;
+        document.getElementById('farmAlert').classList.remove('hidden');}
     } else {
       let rx=-1,ry=-1;
       for(let y=0;y<ROWS&&rx<0;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
@@ -468,8 +484,8 @@ function simTick(){
       if(rx>=0){grid[ry][rx].vPop=2;grid[ry][rx].abandoned=false;updateHUD();sfx(660,0.12,'sine',0.08);log(`🏠 Settlers return to @(${rx},${ry})! +2👪 (farms suffice).`);}
     }
   }
-  // 🤖 crews fell trees on their own once population hits 50
-  if(totalPop()>=50){
+  // 🤖 crews fell trees on their own once population hits 50 (never at night)
+  if(nightLeft===0&&totalPop()>=50){
     if(!autoChopOn){autoChopOn=true;log('🤖 Population hit 50! Work crews now fell trees on their own.');sfx(660,0.15,'sine',0.1);}
     let auto=0;const cands=[];
     for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
@@ -481,7 +497,7 @@ function simTick(){
   {
     const want=Math.min(10,Math.floor(totalPop()/6));
     if(paddlers.length>want)paddlers.length=want;
-    if(paddlers.length<want){const w=waterTiles();if(w.length){const [sx,sy]=w[(Math.random()*w.length)|0];paddlers.push({x:sx,y:sy,tx:sx,ty:sy});}}
+    if(paddlers.length<want){const w=waterTiles();if(w.length){const [sx,sy]=w[(Math.random()*w.length)|0];paddlers.push({x:sx,y:sy,tx:sx,ty:sy,vx:1,vy:0});}}
   }
   if(tickInDay>=TICKS_PER_DAY){
     tickInDay=0;day++;
@@ -496,6 +512,7 @@ function simTick(){
     }
     // 🌙 NIGHT: wolves & bears break 20% (grassy plains) / 30% (snowy tundra) of outer farms/houses
     nightLeft=NIGHT_TICKS;
+    paddlers=[]; // everyone rows home before dark
     howl();
     {
       // beasts only stalk the OUTER line: buildings touching non-building tiles
@@ -559,12 +576,12 @@ function renderInfo(){
   else if(t.base==='source')extra='Spring water! Feeds 4 tiles — brown past 4, then needs a dam or lake.';
   else if(t.base==='desert'&&!t.struct)extra='Cracked desert — no trees, but canals, farms and houses all work here!';
   else if(!t.struct)extra='Good plain land. Build here.';
-  el.innerHTML=`<b>(${x},${y}) ${baseName}</b><br>${t.struct?structName:'Empty '+baseName.toLowerCase()+'.'}<br><span style="opacity:.7">${t.struct==='farm'?(t.broken?'🐾 Broken by wild animals! Mend with 🔨 (4🪵).':'Makes 1🌾 / 2 ticks if watered (brown N/A, max 5 stock). Needs 1👪 worker, feeds 5 — midday census!'):t.struct==='village'?(t.broken?'🐾 Broken! Mend with 🔨 (4🪨) to bring them home.':t.abandoned?'🏚️ Empty — settlers return at midday census once farms allow (1 farm feeds 5👪).':((t.level||0)>=4?'High-rise home: 24 max. Build MORE houses — goal is 250!':`Level ${t.level||0} home (+2👪 on build). Upgrade ×${4-(t.level||0)} more to high-rise 24! Midday census: unfed houses go abandoned!`+(wood>=6+2*(t.level||0)&&money>=30+10*(t.level||0)?` Next Lv${(t.level||0)+1}: ${6+2*(t.level||0)}🪵+$${30+10*(t.level||0)} — EXPAND!`:` Next Lv${(t.level||0)+1} costs ${6+2*(t.level||0)}🪵+$${30+10*(t.level||0)}.`))):t.struct==='canal'?(t.stale?`Stale brown water — connected but past ${MAX_REACH} tiles. Chain a 🚧 dam upstream!`:`Carries snowmelt downhill. Dies after ${MAX_REACH} tiles (brown) — chain a 🚧 dam.`):t.struct==='dam'?'Booster: if fed blue water, resets canal range to 0/4 downstream. $30 on canal, $35 on grass.':extra}</span>`;
+  el.innerHTML=`<b>(${x},${y}) ${baseName}</b><br>${t.struct?structName:'Empty '+baseName.toLowerCase()+'.'}<br><span style="opacity:.7">${t.struct==='farm'?(t.broken?'🐾 Broken by wild animals! Mend with 🔨 (4🪵).':'Makes 1🌾 / 2 ticks if watered (brown N/A, max 5 stock). Needs 1👪 worker, feeds 5 — midday census!'):t.struct==='village'?(t.broken?'🐾 Broken! Mend with 🔨 (4🪨) to bring them home.':t.abandoned?'🏚️ Empty — settlers return at midday census once farms allow (1 farm feeds 5👪).':((t.level||0)>=4?'High-rise home: 24 max. Build MORE houses — goal is 150!':`Level ${t.level||0} home (+2👪 on build). Upgrade ×${4-(t.level||0)} more to high-rise 24! Midday census: unfed houses go abandoned!`+(wood>=6+2*(t.level||0)&&money>=30*Math.pow(2,t.level||0)?` Next Lv${(t.level||0)+1}: ${6+2*(t.level||0)}🪵+$${30*Math.pow(2,t.level||0)} — EXPAND!`:` Next Lv${(t.level||0)+1} costs ${6+2*(t.level||0)}🪵+$${30*Math.pow(2,t.level||0)}.`))):t.struct==='canal'?(t.stale?`Stale brown water — connected but past ${MAX_REACH} tiles. Chain a 🚧 dam upstream!`:`Carries snowmelt downhill. Dies after ${MAX_REACH} tiles (brown) — chain a 🚧 dam.`):t.struct==='dam'?'Booster: if fed blue water, resets canal range to 0/4 downstream. $30 on canal, $35 on grass.':extra}</span>`;
 }
 
 // ================= TOP-DOWN RENDERING =================
 function draw(){
-  flowPhase+=0.05;
+  if(!paused)flowPhase+=0.05;
   // finish timed chop/mine jobs (real seconds) + desert greening
   {
     const nowMs=performance.now();
@@ -572,7 +589,8 @@ function draw(){
     let anyJob=false, finished=false, greened=0;
     for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
       if(t.job){
-        if(nowMs>=t.job.doneAt){
+        if(paused){t.job.doneAt+=dtG*1000;}
+        else if(nowMs>=t.job.doneAt){
           if(t.job.kind==='chop'){const w=t.job.big?4:2;t.base='grass';t.bigTree=false;t.stump=true;wood+=w;log(`🪓 Timber! @(${x},${y}) → +${w}🪵 wood (${wood} total).`);sfx(660,0.12,'sine',0.1);}
           else{t.base='grass';stone+=2;log(`⛏️ Rock cleared @(${x},${y}) → +2🪨 stone (${stone} total). Dig your canal through.`);sfx(440,0.15,'square',0.1);}
           t.job=null;finished=true;
@@ -587,15 +605,15 @@ function draw(){
     }
     if(finished||greened>0){if(greened>0)log(`🌱 ${greened} desert tile${greened>1?'s':''} turned green beside the water!`);computeWater();updateHUD();}
     else if(anyJob){const s=Math.floor(nowMs/1000);if(s!==hudSec){hudSec=s;updateHUD();}}
-    // paddlers glide toward their targets along blue water
-    for(const p of paddlers){
+    // paddlers glide toward their targets along blue water (frozen while paused)
+    if(!paused)for(const p of paddlers){
       const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy);
       if(d<0.05){
         const opts=[];
         for(const [nx,ny] of neighbors(Math.round(p.x),Math.round(p.y))){const n=grid[ny][nx];
           if(n.base==='source'||((n.struct==='canal'||n.struct==='dam'||n.struct==='lake')&&n.water))opts.push([nx,ny]);}
         if(opts.length){const [nx,ny]=opts[(Math.random()*opts.length)|0];p.tx=nx;p.ty=ny;}
-      } else {const step=Math.min(d,dtG*1.6);p.x+=dx/d*step;p.y+=dy/d*step;}
+      } else {const step=Math.min(d,dtG*1.6);p.x+=dx/d*step;p.y+=dy/d*step;p.vx=dx/d;p.vy=dy/d;}
     }
   }
   // backdrop
@@ -660,8 +678,8 @@ function draw(){
       ctx.fillStyle=((x+y)%2===0)?'#57a35e':'#4f9c55';ctx.fillRect(px,py,TW,TH);
     }
 
-    // work crews swarm active jobs (only once 3+ houses stand)
-    if(t.job&&houseCount()>=3){
+    // work crews swarm active jobs by day (only once 3+ houses stand)
+    if(t.job&&nightLeft===0&&houseCount()>=3){
       const crew=t.job.kind==='mine'?5:(t.job.big?6:3);
       const offs=[[-13,-9],[13,-9],[-13,9],[13,9],[0,-14],[0,14]];
       ctx.font='11px serif';ctx.textAlign='center';ctx.textBaseline='middle';
@@ -778,20 +796,36 @@ function draw(){
     ctx.strokeStyle='rgba(0,0,0,.2)';ctx.lineWidth=1;ctx.strokeRect(px+.5,py+.5,TW-1,TH-1);
     if(selected&&selected.x===x&&selected.y===y){ctx.strokeStyle='#fff';ctx.lineWidth=3;ctx.strokeRect(px+1.5,py+1.5,TW-3,TH-3);}
   }
-  // 🛶 canoe traffic
+  // 🛶 canoe traffic: hulls turn into bends, paddler aboard
   paddlers.forEach((p,i)=>{
     const bob=Math.abs(Math.sin(flowPhase*3+i*1.7))*2;
+    const sx=(p.x+0.5)*TW, sy=(p.y+0.5)*TH-4-bob;
+    const ang=Math.atan2(p.vy||0,p.vx||1);
+    ctx.save();ctx.translate(sx,sy);ctx.rotate(ang+Math.PI/2);
     ctx.font='17px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🛶',(p.x+0.5)*TW,(p.y+0.5)*TH-4-bob);
+    ctx.fillText('🛶',0,0);ctx.restore();
+    ctx.fillStyle='#f2c89b';ctx.beginPath();ctx.arc(sx,sy-2,4,0,7);ctx.fill();
+    ctx.fillStyle='#3a6ea5';ctx.fillRect(sx-3,sy+1,6,5);
   });
-  // bobbing red arrows where a dam is needed: end-of-reach canals + stale frontier
+  // tutorial: flashing highlight on the two rocks blocking the spring (until a canal is dug)
+  if(!tut.canal){
+    let sx=-1;for(let x=0;x<COLS;x++)if(grid[0][x].base==='source'){sx=x;break;}
+    if(sx>=0){
+      let marked=0;
+      for(let y=1;y<ROWS&&marked<2;y++){if(grid[y][sx].base==='rock'&&!grid[y][sx].struct){
+        const px=sx*TW, py=y*TH;
+        ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=3;ctx.setLineDash([6,4]);ctx.lineDashOffset=-flowPhase*20;
+        ctx.shadowColor='#ffd54a';ctx.shadowBlur=10;
+        ctx.strokeRect(px+2,py+2,TW-4,TH-4);ctx.restore();marked++;
+      }}
+    }
+  }
+  // bobbing red arrow only on the 1/4 block: upgrade it to a dam to push further
   {
     const bob=Math.sin(flowPhase*5)*4;let shown=0;
     for(let y=0;y<ROWS&&shown<14;y++)for(let x=0;x<COLS&&shown<14;x++){
-      const t=grid[y][x];if(t.struct!=='canal'&&t.struct!=='dam')continue;
-      const needDam=(t.struct==='canal'&&t.water&&t.dist>=MAX_REACH-1)||
-        (t.stale&&neighbors(x,y).some(([nx,ny])=>grid[ny][nx].water));
-      if(!needDam)continue;shown++;
+      const t=grid[y][x];if(t.struct!=='canal')continue;
+      if(!(t.water&&t.dist===1))continue;shown++;
       const px=x*TW, py=y*TH, cxp=px+TW/2, ay=py-10+bob;
       ctx.fillStyle='#ef2b2b';ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;
       ctx.beginPath();ctx.moveTo(cxp-8,ay-8);ctx.lineTo(cxp+8,ay-8);ctx.lineTo(cxp,ay+3);ctx.closePath();ctx.fill();ctx.stroke();
@@ -809,6 +843,11 @@ function draw(){
       ctx.fillText(a.kind,ax+shake,ay);
       pill(ax,ay-20,`${a.scares}/20`,10);
     });
+  }
+  if(paused){
+    ctx.fillStyle='rgba(120,130,140,.55)';ctx.fillRect(0,0,cv.width,cv.height);
+    ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('paused',cv.width/2,cv.height/2);
   }
   requestAnimationFrame(draw);
 }
@@ -856,6 +895,7 @@ function showToolDesc(){
 }
 document.getElementById('bStart').onclick=()=>{document.getElementById('overlay').classList.add('hidden');sfx(660,0.15);renderTut();};
 document.getElementById('tutSkip').onclick=()=>{tut.done=true;renderTut();};
+document.getElementById('farmAlertOk').onclick=()=>{document.getElementById('farmAlert').classList.add('hidden');};
 document.getElementById('bHelp').onclick=()=>document.getElementById('overlay').classList.remove('hidden');
 document.getElementById('bNew').onclick=()=>{if(confirm('Start a new valley?'))newMap();};
 function setPaused(p){paused=p;
