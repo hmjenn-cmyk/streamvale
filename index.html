@@ -180,7 +180,7 @@ function jobOverlay(cx,cy,t,icon,barCol){
 }
 function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.measureText(txt).width+10;ctx.fillStyle=bg||'rgba(4,20,38,.78)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-w/2,cy-fs/2-3,w,fs+7,5);else ctx.rect(cx-w/2,cy-fs/2-3,w,fs+7);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
 
-let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false, damPromptShown=false, firstNightDone=false;
+let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false, damPromptShown=false, firstNightDone=false, hover=null;
 // ---- first-time tutorial: one prompt at a time until every block is used once ----
 const tut={canal:false,mine:false,farm:false,house:false,chop:false,expand:false,dam:false,lake:false,mend:false,done:false};
 const TUT_ORDER=['mine','canal','farm','house','chop','expand','dam','lake','mend'];
@@ -824,7 +824,7 @@ function draw(){
       ctx.beginPath();ctx.moveTo(cx+TW*0.3,cy-TH*0.1);ctx.lineTo(cx+TW*0.1,cy+TH*0.25);ctx.stroke();
       ctx.strokeStyle='rgba(255,255,255,.25)';
       ctx.beginPath();ctx.moveTo(cx-TW/2,cy);ctx.lineTo(cx,cy-TH/2);ctx.lineTo(cx+TW/2,cy);ctx.stroke();
-      if(t.job)jobOverlay(cx,cy,t,'⛏️','#fbbf24');
+      if(t.job)jobOverlay(cx,cy,t,'⛏️','#ef2b2b');
       else if(x%4===1){ctx.font='11px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillText('⛏️',cx,cy-2);}
     } else if(t.base==='rock'){
       polyFill([N,E,S,W],grassFill(x,y));
@@ -833,11 +833,11 @@ function draw(){
       ctx.moveTo(cx-br,cy+2);ctx.lineTo(cx-br*0.5,cy-br*0.9);ctx.lineTo(cx+br*0.6,cy-br*0.7);ctx.lineTo(cx+br,cy+2);ctx.closePath();ctx.fill();
       ctx.fillStyle='#9aa5b1';ctx.beginPath();
       ctx.moveTo(cx-br*0.5,cy-br*0.9);ctx.lineTo(cx+br*0.6,cy-br*0.7);ctx.lineTo(cx,cy-br*0.2);ctx.closePath();ctx.fill();
-      if(t.job)jobOverlay(cx,cy,t,'⛏️','#fbbf24');
+      if(t.job)jobOverlay(cx,cy,t,'⛏️','#ef2b2b');
     } else if(t.base==='tree'){
       polyFill([N,E,S,W],y===0?'#5d6b7d':grassFill(x,y));
       drawPine(cx,cy+2,TW*(t.bigTree?0.66:0.4),t.bigTree);
-      if(t.job)jobOverlay(cx,cy,t,'🪓','#4ade80');
+      if(t.job)jobOverlay(cx,cy,t,'🪓','#ef2b2b');
     } else if(t.base==='desert'){
       polyFill([N,E,S,W],checker?'#d9b77c':'#cfa96f');
       ctx.strokeStyle='rgba(120,85,40,.55)';ctx.lineWidth=1;
@@ -922,8 +922,8 @@ function draw(){
             ctx.fillRect(ax1+(ax2-ax1)*f-1.5,ay1+(ay2-ay1)*f-4,3,4);}
           ctx.font='12px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',cx,cy-13);
         }
-        ctx.fillStyle='rgba(4,25,45,.85)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-        ctx.fillText((isDam?'0':t.dist)+'/'+MAX_REACH,cx,cy+1);
+        if(isDam){ctx.fillStyle='rgba(4,25,45,.85)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('0/'+MAX_REACH,cx,cy+1);}
         if(!isDam&&t.dist>=MAX_REACH-1){ctx.font='10px serif';ctx.fillText('🚧?',cx+TW*0.3,cy-TH*0.4);}
       } else if(t.stale){
         // STALE: muddy brown water with bubbles, feeds nothing
@@ -1048,6 +1048,17 @@ function draw(){
       polyPath([N,E,S,W]);ctx.stroke();ctx.restore();
     }
   }
+  // red placement cross on the hovered square's middle (builds land here)
+  if(hover&&tool!=='inspect'){
+    const F=tileFrame(hover.x,hover.y), hx=(F.N.x+F.S.x)/2, hy=(F.N.y+F.S.y)/2;
+    const a=Math.max(4,TW*0.18);
+    ctx.save();ctx.lineCap='round';
+    ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=6;
+    ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
+    ctx.strokeStyle='#ef2b2b';ctx.lineWidth=3;
+    ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
+    ctx.restore();
+  }
   // 🛶 canoe traffic: hulls turn into bends, paddler aboard
   paddlers.forEach((p,i)=>{
     const bob=Math.abs(Math.sin(flowPhase*3+i*1.7))*2;
@@ -1139,6 +1150,7 @@ function posCenter(e){
 }
 cv.addEventListener('pointerdown',e=>{if(e.button===2||e.button===1)return;isDown=true;lastHit='';try{cv.setPointerCapture(e.pointerId);}catch(_){}const pt=posCenter(e);if(!pt){if(posToTile(e))document.getElementById('hint').textContent='🎯 Click nearer the middle of the square!';return;}tryBuild(pt.x,pt.y,false);});
 cv.addEventListener('pointermove',e=>{
+  const hp=posToTile(e);hover=hp?{x:hp.x,y:hp.y}:null;
   if(rotating){view.rot+=(e.clientX-rotLX)*0.005;rotLX=e.clientX;return;}
   if(panning){const r=cv.getBoundingClientRect(),k=cv.width/r.width;view.x+=(e.clientX-panLX)*k;view.y+=(e.clientY-panLY)*k;panLX=e.clientX;panLY=e.clientY;clampView();return;}
   // 🌙 night warding: wave over a beast's tile 15× to chase it off (saves the building)
@@ -1165,6 +1177,7 @@ cv.addEventListener('click',e=>{const pt=posCenter(e);if(!pt)return;selected={x:
 // right-drag pans, wheel zooms
 let panning=false, panLX=0, panLY=0, rotating=false, rotLX=0;
 cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerleave',()=>{hover=null;});
 cv.addEventListener('pointerdown',e=>{if(e.button===2&&!rotating){rotating=true;rotLX=e.clientX;try{cv.setPointerCapture(e.pointerId);}catch(_){}return;}if(e.button===1&&!panning){panning=true;panLX=e.clientX;panLY=e.clientY;try{cv.setPointerCapture(e.pointerId);}catch(_){}}});
 cv.addEventListener('wheel',e=>{e.preventDefault();
   const r=cv.getBoundingClientRect();
