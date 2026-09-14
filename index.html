@@ -176,7 +176,6 @@ function jobOverlay(cx,cy,t,icon,barCol){
   ctx.beginPath();ctx.moveTo(cx-TW*0.28,cy-TH*0.3);ctx.lineTo(cx-TW*0.1,cy+TH*0.1);ctx.moveTo(cx+TW*0.28,cy-TH*0.3);ctx.lineTo(cx+TW*0.1,cy+TH*0.1);ctx.stroke();
   ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(cx-TW*0.32,cy-TH*0.62,TW*0.64,5);
   ctx.fillStyle=barCol;ctx.fillRect(cx-TW*0.32,cy-TH*0.62,TW*0.64*Math.min(1,frac),5);
-  pill(cx,cy-TH/2-13,`${icon} ${Math.ceil(left)}s`,9);
 }
 function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.measureText(txt).width+10;ctx.fillStyle=bg||'rgba(4,20,38,.78)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-w/2,cy-fs/2-3,w,fs+7,5);else ctx.rect(cx-w/2,cy-fs/2-3,w,fs+7);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
 
@@ -1051,11 +1050,11 @@ function draw(){
   // red placement cross on the hovered square's middle (builds land here)
   if(hover&&tool!=='inspect'){
     const F=tileFrame(hover.x,hover.y), hx=(F.N.x+F.S.x)/2, hy=(F.N.y+F.S.y)/2;
-    const a=Math.max(4,TW*0.18);
+    const a=Math.max(3,TW*0.135);
     ctx.save();ctx.lineCap='round';
-    ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=6;
+    ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=4.5;
     ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
-    ctx.strokeStyle='#ef2b2b';ctx.lineWidth=3;
+    ctx.strokeStyle='#ef2b2b';ctx.lineWidth=2.25;
     ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
     ctx.restore();
   }
