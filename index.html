@@ -1194,16 +1194,7 @@ function posToTile(e){
   const p=posFloat(e);
   return p?{x:Math.floor(p.fx),y:Math.floor(p.fy)}:null;
 }
-function posCenter(e){
-  // clicks only count in the middle of the square (diamond metric)
-  const p=posFloat(e);
-  if(!p)return null;
-  const x=Math.floor(p.fx), y=Math.floor(p.fy);
-  const dx=p.fx-x-0.5, dy=p.fy-y-0.5;
-  if(Math.abs(dx)+Math.abs(dy)>0.32)return null;
-  return {x,y};
-}
-cv.addEventListener('pointerdown',e=>{if(e.button===2||e.button===1)return;isDown=true;lastHit='';try{cv.setPointerCapture(e.pointerId);}catch(_){}const pt=posCenter(e);if(!pt){if(posToTile(e))document.getElementById('hint').textContent='🎯 Click nearer the middle of the square!';return;}tryBuild(pt.x,pt.y,false);});
+cv.addEventListener('pointerdown',e=>{if(e.button===2||e.button===1)return;isDown=true;lastHit='';try{cv.setPointerCapture(e.pointerId);}catch(_){}const pt=posToTile(e);if(!pt)return;tryBuild(pt.x,pt.y,false);});
 cv.addEventListener('pointermove',e=>{
   const hp=posToTile(e);hover=hp?{x:hp.x,y:hp.y}:null;
   if(rotating){view.rot+=(e.clientX-rotLX)*0.005;rotLX=e.clientX;return;}
@@ -1228,7 +1219,7 @@ cv.addEventListener('pointermove',e=>{
   }
   if(!isDown)return;if(tool!=='canal'&&tool!=='bulldoze'&&tool!=='chop'&&tool!=='mine')return;const pt2=posToTile(e);if(!pt2)return;tryBuild(pt2.x,pt2.y,true);});
 window.addEventListener('pointerup',()=>{isDown=false;lastHit='';panning=false;rotating=false;});
-cv.addEventListener('click',e=>{const pt=posCenter(e);if(!pt)return;selected={x:pt.x,y:pt.y};renderInfo();});
+cv.addEventListener('click',e=>{const pt=posToTile(e);if(!pt)return;selected={x:pt.x,y:pt.y};renderInfo();});
 // right-drag pans, wheel zooms
 let panning=false, panLX=0, panLY=0, rotating=false, rotLX=0;
 cv.addEventListener('contextmenu',e=>e.preventDefault());
