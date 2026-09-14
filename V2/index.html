@@ -1,0 +1,1288 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Streamvale — Mountain Snowmelt to the Plains</title>
+<style>
+  :root{--bg:#0f1e2e;--panel:#162c44;--accent:#38bdf8;--green:#4ade80;--sand:#fbbf24}
+  *{box-sizing:border-box;font-family:'Segoe UI',system-ui,sans-serif}
+  body{margin:0;background:radial-gradient(1200px 600px at 20% -10%,#1e3a5f, var(--bg));color:#e8f1ff;min-height:100vh;display:flex;flex-direction:column;align-items:center}
+  header{width:100%;max-width:1230px;padding:14px 16px 6px;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  h1{margin:0;font-size:22px;letter-spacing:.5px} h1 span{color:var(--accent)}
+  #hud{display:flex;gap:8px;flex-wrap:wrap}
+  #sMoney{font-size:27px!important}
+  #transport{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+  .stat{background:var(--panel);border:1px solid #2a4a6b;border-radius:10px;padding:6px 12px;min-width:86px;text-align:center}
+  .stat b{display:block;font-size:18px} .stat small{opacity:.7;font-size:11px;text-transform:uppercase}
+  #wrap{width:100%;max-width:1230px;display:grid;grid-template-columns:190px 1fr 240px;gap:12px;padding:10px 16px 20px}
+  @media(max-width:900px){#wrap{grid-template-columns:1fr} }
+  .card{background:var(--panel);border:1px solid #2a4a6b;border-radius:14px;padding:12px}
+  .card h3{margin:0 0 8px;font-size:13px;text-transform:uppercase;letter-spacing:1px;opacity:.8}
+  .tool{display:flex;gap:8px;align-items:center;width:100%;text-align:left;background:#0f2438;border:2px solid transparent;color:#e8f1ff;border-radius:10px;padding:8px;margin-bottom:8px;cursor:pointer}
+  .tool:hover{border-color:#2a4a6b} .tool.active{border-color:var(--accent);background:#12324f}
+  .tool .ico{font-size:20px} .tool small{display:block;opacity:.7}
+  #canvasHolder{position:relative}
+  canvas{width:100%;height:auto;border-radius:12px;display:block;background:#0b1a2b;cursor:crosshair;touch-action:none}
+  #toolbar2{display:flex;gap:8px;margin-top:8px;flex-wrap:wrap}
+  button{background:#0f2438;color:#e8f1ff;border:1px solid #2a4a6b;border-radius:8px;padding:7px 10px;cursor:pointer}
+  button:hover{border-color:var(--accent)} button.primary{background:var(--accent);color:#04263b;font-weight:700;border:none}
+  #log{height:230px;overflow:auto;font-size:13px;background:#0b1a2b;border-radius:8px;padding:8px}
+  #log div{margin-bottom:4px;opacity:.9}
+  #info{font-size:13px;line-height:1.5;min-height:120px;background:#0b1a2b;border-radius:8px;padding:8px}
+  #goalbar{height:10px;background:#0b1a2b;border-radius:99px;overflow:hidden;margin-top:6px}
+  #goalfill{height:100%;width:0%;background:linear-gradient(90deg,var(--accent),var(--green));transition:width .5s}
+  #canvasHolder{position:relative}
+  #tut{position:fixed;left:50%;bottom:14px;transform:translateX(-50%);background:rgba(6,20,38,.93);border:2px solid var(--accent);border-radius:12px;padding:10px 14px;max-width:480px;text-align:center;font-size:17.5px;z-index:50;pointer-events:none;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #tut small{opacity:.65} #tut button{margin-top:6px;font-size:12px;pointer-events:auto}
+  #farmAlert{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(60,12,12,.95);border:2px solid #f87171;border-radius:12px;padding:14px 18px;max-width:420px;text-align:center;font-size:20px;z-index:60;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #damAlert,#mendAlert{position:fixed;left:50%;top:40%;transform:translate(-50%,-50%);background:rgba(60,12,12,.95);border:2px solid #f87171;border-radius:12px;padding:14px 18px;max-width:420px;text-align:center;font-size:20px;z-index:60;box-shadow:0 4px 24px rgba(0,0,0,.5)}
+  #farmAlert button,#damAlert button,#mendAlert button{font-size:16px;margin-top:8px}
+  #overlay{position:fixed;inset:0;background:rgba(3,10,20,.82);display:flex;align-items:center;justify-content:center;z-index:10;padding:16px}
+  #overlay .box{max-width:560px;background:var(--panel);border:1px solid #2a4a6b;border-radius:16px;padding:24px}
+  #overlay h2{margin-top:0} .kbd{background:#0b1a2b;border:1px solid #2a4a6b;border-radius:6px;padding:1px 6px}
+  .hidden{display:none!important}
+</style>
+</head>
+<body>
+<header>
+  <h1>🏔️ <span>Streamvale</span> — snowmelt to the plains</h1>
+  <div id="hud">
+    <div class="stat"><b id="sFood">10</b><small>🌾 food</small></div>
+    <div class="stat"><b id="sWood">0</b><small>🪵 wood</small></div>
+    <div class="stat"><b id="sStone">0</b><small>🪨 stone</small></div>
+    <div class="stat"><b id="sPop">0</b><small>🧑 population</small></div>
+    <div class="stat"><b id="sWater">0</b><small>💧 watered</small></div>
+    <div class="stat"><b id="sMoney">$180</b><small>💰 money</small></div>
+    <div class="stat"><b id="sDay">Day 1</b><small>☀️ time</small></div>
+    <div class="stat"><b id="sLevel">1</b><small id="sLevelName">🗺️ Grassy Plains</small></div>
+  </div>
+  <div id="transport">
+    <button id="bPause" title="Pause">⏸️ Pause</button>
+    <button id="bPlay" class="primary" title="Play">▶️ Play</button>
+    <button id="b1" class="primary" title="Normal speed">1x</button>
+    <button id="b2" title="Double speed">2x</button>
+    <button id="b3" title="Quad speed">4x</button>
+  </div>
+</header>
+
+<div id="wrap">
+  <div class="card">
+    <h3>🛠️ Build tools</h3>
+    <div id="tools"></div>
+    <div style="margin-top:8px;display:grid;gap:6px">
+      <button id="bNew">🗺️ New valley</button>
+      <button id="bHelp">❓ How to play</button>
+    </div>
+  </div>
+
+  <div class="card">
+    <div id="canvasHolder"><canvas id="cv" width="800" height="600"></canvas><div id="tut" class="hidden"><span id="tutTxt"></span><br><button id="tutSkip">Skip tutorial</button></div><div id="farmAlert" class="hidden"><span id="farmAlertTxt"></span><br><button id="farmAlertOk">OK — build farms!</button></div><div id="damAlert" class="hidden"><span id="damAlertTxt"></span><br><button id="damAlertOk">OK — build dams!</button></div><div id="mendAlert" class="hidden"><span id="mendAlertTxt"></span><br><button id="mendAlertOk">OK — mend!</button></div></div>
+    <div id="toolbar2">
+      <span id="hint" style="font-size:13px;opacity:.85">🔍 Scroll = zoom · Right-drag = rotate · Middle-drag = pan · 1 farm needs 1👷 + feeds 5👪!</span>
+    </div>
+    <div class="card goalcard" style="margin-top:10px;padding:8px">
+      <div style="font-size:13px">🎯 Overall goal: <b>150👪</b> <span id="goalTxt">(0/150)</span></div>
+      <div id="goalbar"><div id="goalfill"></div></div>
+      <div id="toolDesc" style="font-size:13px;margin-top:6px;opacity:.92"></div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h3>🔍 Tile info</h3>
+    <div id="info">Click any tile to inspect it.</div>
+    <h3 style="margin-top:10px">📜 Valley log</h3>
+    <div id="log"></div>
+  </div>
+</div>
+
+<div id="overlay">
+  <div class="box" id="overlayBox">
+    <h2>🏔️ Welcome to Streamvale!</h2>
+    <p>You are the waterkeeper. Mine the rocks to break through to the springs, then build your canals, and houses to get $$$. Farm - Build - Expand!</p>
+    <button class="primary" id="bStart" style="font-size:16px;padding:10px 18px">Start building ▼</button>
+  </div>
+</div>
+
+<script>
+let COLS=16, ROWS=15;
+const cv=document.getElementById('cv'), ctx=cv.getContext('2d');
+let TW=48, TH=24, OX=400, OY=86; // iso diamond layout, recomputed by layoutISO()
+let view={z:1,x:0,y:0,rot:0}; // camera: zoom + pan offset (screen px) + rotation
+function layoutISO(){
+  const W=cv.width, H=cv.height, span=COLS+ROWS;
+  let w=Math.floor(Math.min((W-30)/(span/2),(H-200)/(span/4)));
+  w=Math.max(16,Math.min(56,w));
+  TW=w; TH=Math.max(8,Math.round(w/2));
+  OX=Math.round(W/2);
+  const gridH=span*TH/2+40;
+  OY=Math.max(46,Math.round((H-gridH)/2));
+  clampView();
+}
+function mapCenter(){return {x:isoCX((COLS-1)/2,(ROWS-1)/2),y:isoCY((COLS-1)/2,(ROWS-1)/2)};}
+function clampView(){
+  const mp=150+350*view.z;
+  view.x=Math.min(Math.max(view.x,-mp),mp);view.y=Math.min(Math.max(view.y,-mp),mp);
+}
+function isoP(gx,gy){
+  const c=Math.cos(view.rot), s=Math.sin(view.rot);
+  const ccx=(COLS-1)/2, ccy=(ROWS-1)/2;
+  const rx=(gx-ccx)*c-(gy-ccy)*s, ry=(gx-ccx)*s+(gy-ccy)*c;
+  return {x:OX+(rx-ry)*TW/2, y:OY+(rx+ry)*TH/2};
+}
+function isoCX(x,y){return isoP(x,y).x;}
+function isoCY(x,y){return isoP(x,y).y;}
+function tileFrame(x,y){
+  // rotated ground half-diagonals -> screen; corners stay glued to the soil
+  const c=Math.cos(view.rot), s=Math.sin(view.rot);
+  const ccx=(COLS-1)/2, ccy=(ROWS-1)/2;
+  const rx=(x-ccx)*c-(y-ccy)*s, ry=(x-ccx)*s+(y-ccy)*c;
+  const cx=OX+(rx-ry)*TW/2, cy=OY+(rx+ry)*TH/2;
+  const ax=0.5*c+0.5*s, ay=0.5*s-0.5*c, bx=0.5*c-0.5*s, by=0.5*s+0.5*c;
+  const v1x=(ax-ay)*TW/2, v1y=(ax+ay)*TH/2, v2x=(bx-by)*TW/2, v2y=(bx+by)*TH/2;
+  return {cx,cy,
+    N:{x:cx-v2x,y:cy-v2y}, E:{x:cx+v1x,y:cy+v1y},
+    S:{x:cx+v2x,y:cy+v2y}, W:{x:cx-v1x,y:cy-v1y}, k:rx+ry};
+}
+function gridDirScreen(dx,dy){
+  const c=Math.cos(view.rot), s=Math.sin(view.rot);
+  const rx=dx*c-dy*s, ry=dx*s+dy*c;
+  return {x:(rx-ry)*TW/2, y:(rx+ry)*TH/2};
+}
+function polyPath(P){ctx.beginPath();ctx.moveTo(P[0].x,P[0].y);for(let i=1;i<P.length;i++)ctx.lineTo(P[i].x,P[i].y);ctx.closePath();}
+function polyFill(P,fill){polyPath(P);ctx.fillStyle=fill;ctx.fill();}
+function insetC(F,f){const C={x:F.cx,y:F.cy};const L=(P)=>({x:C.x+(P.x-C.x)*f,y:C.y+(P.y-C.y)*f});return {N:L(F.N),E:L(F.E),S:L(F.S),W:L(F.W)};}
+function edgeMid(A,B){return {x:(A.x+B.x)/2,y:(A.y+B.y)/2};}
+function diaPath(cx,cy,w,h){ctx.beginPath();ctx.moveTo(cx,cy-h/2);ctx.lineTo(cx+w/2,cy);ctx.lineTo(cx,cy+h/2);ctx.lineTo(cx-w/2,cy);ctx.closePath();}
+function diaFill(cx,cy,w,h,fill){diaPath(cx,cy,w,h);ctx.fillStyle=fill;ctx.fill();}
+function hash2(x,y){let h=((x*73856093)^(y*19349663))|0;h^=h>>>13;h=Math.imul(h,1274126177);h^=h>>>16;return (h>>>0)%1000/1000;}
+function grassFill(x,y){if(level===2)return ((x+y)%2===0)?'#e9eef6':'#dde5f0';return ((x+y)%2===0)?'#57a35e':'#4f9c55';}
+function drawPine(cx,cy,s,big){
+  const u=s/22;
+  ctx.fillStyle='#5b3a22';ctx.fillRect(cx-1.6*u,cy-1*u,3.2*u,7*u);
+  const sway=Math.sin(flowPhase*2+cx*0.05)*0.9*u;
+  const tiers=big?3:2;
+  for(let i=0;i<tiers;i++){
+    const w=(11-i*2.8)*u*(big?1.3:1), ty=cy+(1-i*6.5)*u, hgt=8.5*u, sh=sway*(i+1)*0.35;
+    ctx.fillStyle=i%2?'#1d4d22':'#276b2e';
+    ctx.beginPath();ctx.moveTo(cx+sh,ty-hgt);ctx.lineTo(cx-w/2+sh,ty);ctx.lineTo(cx+w/2+sh,ty);ctx.closePath();ctx.fill();
+    ctx.fillStyle='rgba(255,255,255,.14)';
+    ctx.beginPath();ctx.moveTo(cx+sh,ty-hgt);ctx.lineTo(cx+sh,ty);ctx.lineTo(cx+w*0.18+sh,ty);ctx.closePath();ctx.fill();
+  }
+}
+function jobOverlay(cx,cy,t,icon,barCol){
+  const left=Math.max(0,(t.job.doneAt-performance.now())/1000), frac=1-left/t.job.total;
+  ctx.strokeStyle='rgba(255,220,120,.9)';ctx.lineWidth=2;
+  ctx.beginPath();ctx.moveTo(cx-TW*0.28,cy-TH*0.3);ctx.lineTo(cx-TW*0.1,cy+TH*0.1);ctx.moveTo(cx+TW*0.28,cy-TH*0.3);ctx.lineTo(cx+TW*0.1,cy+TH*0.1);ctx.stroke();
+  ctx.fillStyle='rgba(0,0,0,.45)';ctx.fillRect(cx-TW*0.32,cy-TH*0.62,TW*0.64,5);
+  ctx.fillStyle=barCol;ctx.fillRect(cx-TW*0.32,cy-TH*0.62,TW*0.64*Math.min(1,frac),5);
+}
+function pill(cx,cy,txt,fs,bg){ctx.font=`bold ${fs}px sans-serif`;const w=ctx.measureText(txt).width+10;ctx.fillStyle=bg||'rgba(4,20,38,.78)';ctx.beginPath();if(ctx.roundRect)ctx.roundRect(cx-w/2,cy-fs/2-3,w,fs+7,5);else ctx.rect(cx-w/2,cy-fs/2-3,w,fs+7);ctx.fill();ctx.fillStyle='#fff';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(txt,cx,cy+1);}
+
+let grid, money, food, wood, stone, day, tickInDay, totalTicks, speed=1, paused=false, tool='canal', selected=null, won=false, isDown=false, lastHit='', hudSec=-1, nightLeft=0, lastGreenMs=0, level=1, animals=[], paddlers=[], treesExist=false, lastRustle=0, lastWard='', autoChopOn=false, damPromptShown=false, firstNightDone=false, hover=null;
+// ---- first-time tutorial: one prompt at a time until every block is used once ----
+const tut={canal:false,mine:false,farm:false,house:false,chop:false,expand:false,dam:false,lake:false,mend:false,done:false};
+const TUT_ORDER=['mine','canal','farm','house','chop','expand','dam','lake','mend'];
+const TUT_TEXT={
+ mine:'① Mine the 2 flashing 🟨 rocks to free the spring — pick ⛏️ (15s, +2🪨 each).',
+ canal:'② Dig a canal DOWNHILL from the spring — pick 🟦 and drag on grass.',
+ farm:'③ Build a farm (🌾 $25) on GREEN land beside BLUE water.',
+ house:'④ Build a house (🏠 $50) on green land — settles +2👪.',
+ chop:'⑤ Chop a tree (🪓) — 1 click, timber in 10s (+2🪵, big trees 20s/+4🪵).',
+ expand:'⑥ Expand a house 4× (🏘️, wood +2/level, money doubles $30→$240) — Lv4 high-rise holds 24!',
+ dam:'⑦ Build a dam (🚧) to push blue water past 4 tiles.',
+ lake:'⑧ Fields >10 rows out need a lake (🏞️ $500, 2×3).',
+ mend:'⑨ Survive a 🌙 night — wave over each beast 15× to chase it off! Then mend (🔨): farms 4🪵, houses 4🪨.'};
+function tutDone(k){if(tut.done)return;if(!tut[k])tut[k]=true;renderTut();}
+function houseCount(){let h=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct==='village')h++;return h;}
+function renderTut(){
+  const box=document.getElementById('tut');
+  if(!box)return;
+  if(tut.done){box.classList.add('hidden');return;}
+  const next=TUT_ORDER.find(k=>!tut[k]);
+  if(!next){tut.done=true;box.classList.add('hidden');log('✅ Valley mastered! No more prompts — reach 150👪!');sfx(880,0.2,'sine',0.1);return;}
+  box.classList.remove('hidden');
+  // mend tip waits until the first night has ended (nothing to mend before beasts strike)
+  if(next==='mend'&&!firstNightDone){document.getElementById('tutTxt').innerHTML=`🌙 Survive the first night — the 🔨 Mend tip unlocks at dawn…`;return;}
+  // expand tip unlocks only after 5 houses stand
+  if(next==='expand'){
+    const h=houseCount();
+    if(h<5){document.getElementById('tutTxt').innerHTML=`🏘️ Raise more houses to unlock the Expand tip (<b>${h}/5</b>)…`;return;}
+  }
+  document.getElementById('tutTxt').innerHTML=`<b>Next:</b> ${TUT_TEXT[next]} <small>(${TUT_ORDER.indexOf(next)+1}/${TUT_ORDER.length})</small>`;
+}
+let flowPhase=0;
+const MAX_REACH=4, CHOP_MS=10000, MINE_MS=15000;
+const TICKS_PER_DAY=225, NIGHT_TICKS=20; // 225 × 0.8s ticks = 3-minute days
+
+const TOOLS=[
+ {id:'canal', ico:'🟦', name:'Dig canal', cost:5, desc:'Drag DOWNHILL. 4 max! Far fields need a 🏞️ lake.'},
+ {id:'dam', ico:'🚧', name:'Dam', cost:35, desc:'On canal/grass. Resets range. Cost +65% every 8 dams!'},
+ {id:'farm', ico:'🌾', name:'Farm', cost:25, desc:'GREEN land + BLUE water + 1👪 worker. Feeds 5. $25, +65% every 8!'},
+ {id:'village', ico:'🏠', name:'House', cost:50, desc:'Green land only. Settle +2👪. $50, +65% every 8 owned!'},
+ {id:'expand', ico:'🏘️', name:'Expand house', cost:30, desc:'Money $ doubles/level ($30→$240). Wood +2/level. ×4 → 24!'},
+ {id:'chop', ico:'🪓', name:'Chop trees', cost:0, desc:'1 click — 10s (big tree 20s, +4🪵).'},
+ {id:'mine', ico:'⛏️', name:'Mine rock', cost:0, desc:'1 click per rock — 15s → +2🪨.'},
+ {id:'mend', ico:'🔨', name:'Mend', cost:0, desc:'Fix farm 4🪵, house 4🪨.'},
+ {id:'lake', ico:'🏞️', name:'Lake', cost:500, desc:'2×3 reservoir. Waters 4 around it.'},
+ {id:'bulldoze', ico:'🧹', name:'Bulldoze', cost:0, desc:'Remove canal/dam/building. 50% refund.'},
+ {id:'inspect', ico:'🔍', name:'Inspect', cost:0, desc:'Click to learn about a tile.'},
+];
+
+function rnd(n){return Math.floor(Math.random()*n)}
+function log(msg){const l=document.getElementById('log');const d=document.createElement('div');d.textContent='D'+day+' '+msg;l.prepend(d);while(l.children.length>40)l.lastChild.remove();}
+function sfx(f,d=0.12,type='sine',v=0.12){try{const a=sfx.ac||(sfx.ac=new (window.AudioContext||window.webkitAudioContext)());const o=a.createOscillator(),g=a.createGain();o.type=type;o.frequency.value=f;g.gain.value=v;o.connect(g);g.connect(a.destination);o.start();g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+d);o.stop(a.currentTime+d);}catch(e){}}
+function howl(){try{const a=sfx.ac||(sfx.ac=new (window.AudioContext||window.webkitAudioContext)());const mk=(dl,f0,f1,f2,dur,v)=>{const o=a.createOscillator(),g=a.createGain();o.type='sine';const t0=a.currentTime+dl;o.frequency.setValueAtTime(f0,t0);o.frequency.linearRampToValueAtTime(f1,t0+dur*0.35);o.frequency.linearRampToValueAtTime(f2,t0+dur);g.gain.setValueAtTime(v,t0);g.gain.exponentialRampToValueAtTime(0.001,t0+dur+0.1);o.connect(g);g.connect(a.destination);o.start(t0);o.stop(t0+dur+0.15);};mk(0,260,640,360,1.5,0.09);mk(0.9,300,560,340,1.1,0.06);}catch(e){}}
+let noiseBuf=null;
+function noiseBurst(dur,v,freq){try{const a=sfx.ac||(sfx.ac=new (window.AudioContext||window.webkitAudioContext)());if(!noiseBuf){noiseBuf=a.createBuffer(1,a.sampleRate,a.sampleRate);const d=noiseBuf.getChannelData(0);for(let i=0;i<d.length;i++)d[i]=Math.random()*2-1;}const s=a.createBufferSource();s.buffer=noiseBuf;s.loop=true;const f=a.createBiquadFilter();f.type='lowpass';f.frequency.value=freq;const g=a.createGain();g.gain.setValueAtTime(v,a.currentTime);g.gain.exponentialRampToValueAtTime(0.001,a.currentTime+dur);s.connect(f);f.connect(g);g.connect(a.destination);s.start();s.stop(a.currentTime+dur+0.05);}catch(e){}}
+function rustle(){noiseBurst(0.5,0.05,1400);} // 50% volume leaves
+function flowSnd(){noiseBurst(1.2,0.05,650);} // 50% volume stream
+function drip(){sfx(880,0.09,'sine',0.05);setTimeout(()=>sfx(520,0.08,'sine',0.04),95);} // stagnant drip
+
+function blankTile(base){return {base,struct:null,water:false,stale:false,dist:Infinity,job:null,broken:false,abandoned:false,bigTree:false,stump:false,greenT:0,level:0,fProg:0,fStock:0,vPop:0,vTimer:0,vStarve:0,fBump:0,pBump:0};}
+function genBase(x,y){
+  const r=Math.random();
+  if(y===0)return r<0.15?'tree':'rock';              // high crags (+25% trees)
+  if(y===1||y===2)return 'rock';                     // twin grey rock barrier
+  if(y>=ROWS-4){if(level===2)return 'grass';if(r<0.05)return 'rock';return 'desert';} // cracked desert (snowy grass in L2): NO trees
+  const treeP=(0.38-0.23*((y-3)/(ROWS-8)))*1.25;      // forests crowd the mountains (+25%)
+  if(r<0.05)return 'rock';
+  if(r<0.05+treeP)return 'tree';
+  return 'grass';
+}
+function currentGoal(){return 150;}
+function nightRate(){return level===2?0.3:0.2;}
+function maxPop(lv){return 12+3*lv;} // house levels 0..4 → max 12,15,18,21,24
+function structCount(s){let c=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct===s)c++;return c;}
+function priceMult(s){return 1+0.65*Math.floor(structCount(s)/8);} // money cost +65% per 8 owned
+// groups of 5+ trees grow 1 BIG tree (same icon, 2× size, 20s chop, +4🪵)
+function makeBigTrees(){
+  const seen=new Set();
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const k=x+','+y, t0=grid[y][x];
+    if(t0.base!=='tree'||t0.bigTree||t0.struct||t0.job||seen.has(k))continue;
+    const group=[], q=[[x,y]]; let hasBig=false;
+    while(q.length){
+      const [cx,cy]=q.pop(), kk=cx+','+cy;
+      if(seen.has(kk))continue; seen.add(kk);
+      const ct=grid[cy][cx];
+      if(ct.base!=='tree'||ct.struct||ct.job)continue;
+      if(ct.bigTree){hasBig=true;continue;}
+      group.push([cx,cy]);
+      for(const [nx,ny] of neighbors(cx,cy))q.push([nx,ny]);
+    }
+    if(group.length>=5&&!hasBig){const [bx,by]=group[Math.floor(Math.random()*group.length)];grid[by][bx].bigTree=true;}
+  }
+}
+// rows between a tile-row and the nearest spring/lake water
+function rowsFromWater(y){
+  let best=Infinity;
+  for(let yy=0;yy<ROWS;yy++)for(let xx=0;xx<COLS;xx++){const s=grid[yy][xx];
+    if(s.base==='source'||s.struct==='lake'){const d=Math.abs(y-yy);if(d<best)best=d;}}
+  return best;
+}
+function expandGrid(){
+  for(let y=0;y<ROWS;y++)for(let i=0;i<2;i++)grid[y].push(blankTile(genBase(COLS+i,y)));
+  COLS+=2;
+  const bottom=[];for(let x=0;x<COLS;x++)bottom.push(blankTile(genBase(x,ROWS)));
+  grid.push(bottom);ROWS+=1;
+  layoutISO();
+  log(`🗺️ The valley grows! +2 columns, +1 row — now ${COLS}×${ROWS}.`);
+}
+function regrowTrees(){
+  const empty=[];
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+    if(t.base==='grass'&&!t.struct&&!t.job)empty.push([x,y]);}
+  const n=Math.min(empty.length,Math.max(empty.length?1:0,Math.floor(empty.length*0.04)));
+  for(let i=0;i<n;i++){const k=Math.floor(Math.random()*empty.length);const [x,y]=empty.splice(k,1)[0];grid[y][x].base='tree';}
+  if(n>0)log(`🌱 ${n} new tree${n>1?'s':''} sprouted on empty grass.`);
+}
+function newMap(){
+  COLS=16;ROWS=15;view={z:1,x:0,y:0,rot:0};layoutISO();
+  grid=[];
+  for(let y=0;y<ROWS;y++){let row=[];for(let x=0;x<COLS;x++)row.push(blankTile(genBase(x,y)));grid.push(row);}
+  // single spring: peak centre
+  grid[0][Math.floor(COLS/2)]=blankTile('source');
+  money=180;food=10;wood=0;stone=0;day=1;tickInDay=0;totalTicks=0;won=false;selected=null;lastHit='';nightLeft=0;animals=[];paddlers=[];autoChopOn=false;damPromptShown=false;firstNightDone=false;
+  // forests reclaim 80% of green squares
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.base==='grass'&&Math.random()<0.8)t.base='tree';}
+  // 4×4 tree-free landing just below the spring
+  {
+    const sx0=Math.floor(COLS/2);
+    for(let dy=1;dy<=4;dy++)for(let dx=-1;dx<=2;dx++){const nx=sx0+dx, ny=dy;
+      if(inB(nx,ny)&&grid[ny][nx].base==='tree'){grid[ny][nx].base='grass';grid[ny][nx].bigTree=false;}}
+  }
+  makeBigTrees();
+  log(`Level ${level} — ${level===2?'Snowy Tundra':'Grassy Plains'}! One peak spring. Goal: 150👪. Mine the twin rock rows (2–3)!`);
+  computeWater();updateHUD();
+}
+
+function advanceLevel(){level=2;newMap();document.getElementById('overlay').classList.add('hidden');log('❄️ Level 2 — Snowy Tundra! Same rules under snow, hungrier beasts (30% raids)!');}
+function waterTiles(){const w=[];for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.base==='source'||((t.struct==='canal'||t.struct==='dam'||t.struct==='lake')&&t.water))w.push([x,y]);}return w;}
+function inB(x,y){return x>=0&&y>=0&&x<COLS&&y<ROWS}
+function neighbors(x,y){return [[x+1,y],[x-1,y],[x,y+1],[x,y-1]].filter(([a,b])=>inB(a,b))}
+
+function computeWater(){
+  // reset; water only travels MAX_REACH (8) tiles from a spring/well/dam
+  treesExist=false;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){grid[y][x].water=false;grid[y][x].stale=false;grid[y][x].dist=Infinity;if(grid[y][x].base==='tree')treesExist=true;}
+  let q=[];
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x];
+    if(t.base==='source'||t.struct==='lake'){t.water=true;t.dist=0;q.push([x,y,0]);}
+  }
+  const conducts=(t)=>t.base==='source'||t.struct==='canal'||t.struct==='dam'||t.struct==='lake';
+  const emittedDams=new Set();
+  q.sort((a,b)=>a[2]-b[2]);
+  while(q.length){
+    let bi=0;for(let i=1;i<q.length;i++)if(q[i][2]<q[bi][2])bi=i;
+    const [x,y,d]=q.splice(bi,1)[0];
+    const t=grid[y][x];
+    let outD=d;
+    if(t.struct==='dam'&&t.water){
+      const key=x+','+y;
+      if(!emittedDams.has(key)){emittedDams.add(key);outD=0;t.dist=Math.min(t.dist,0);}
+      else outD=t.dist;
+    }
+    for(const [nx,ny] of neighbors(x,y)){
+      const nt=grid[ny][nx];
+      if(!(nt.struct==='canal'||nt.struct==='dam'))continue;
+      const nd=outD+1;
+      if(nd>MAX_REACH)continue;
+      if(nd<nt.dist){
+        nt.dist=nd;nt.water=true;
+        q.push([nx,ny,nd]);
+      } else if(!nt.water){
+        nt.dist=Math.min(nt.dist,nd);nt.water=true;q.push([nx,ny,nd]);
+      }
+    }
+  }
+  // stale pass: canals/dams PHYSICALLY connected to a source but past the
+  // 4-tile limit. Brown stagnant water: looks wet, feeds nothing.
+  {
+    const seen=new Set(), qq=[];
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+      const t=grid[y][x];
+      if(t.base==='source'||t.struct==='lake'){seen.add(x+','+y);qq.push([x,y]);}
+    }
+    while(qq.length){
+      const [x,y]=qq.pop();
+      for(const [nx,ny] of neighbors(x,y)){
+        const k=nx+','+ny, nt=grid[ny][nx];
+        if(seen.has(k))continue;
+        if(nt.struct==='canal'||nt.struct==='dam'){seen.add(k);qq.push([nx,ny]);}
+      }
+    }
+    for(const k of seen){
+      const [x,y]=k.split(',').map(Number);
+      const t=grid[y][x];
+      if((t.struct==='canal'||t.struct==='dam')&&!t.water)t.stale=true;
+    }
+  }
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x];
+    if(t.struct==='farm'||t.struct==='village'){
+      for(const [nx,ny] of neighbors(x,y)){
+        const n=grid[ny][nx];
+        if(n.water&&conducts(n)){t.water=true;break;}
+      }
+    }
+  }
+}
+
+function totalPop(){let s=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.struct==='village'&&!t.broken)s+=t.vPop||0;}return s;}
+function countWatered(){let s=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.water&&(t.struct==='canal'||t.struct==='dam'||t.struct==='lake'||t.struct==='farm'||t.struct==='village'))s++;}return s;}
+// one hit per tile-entry while dragging (clicks always count) — chopping/mining takes time
+function countHit(x,y,isDrag){
+  const hk=tool+x+','+y;
+  if(isDrag){if(lastHit===hk)return false;}
+  lastHit=hk;return true;
+}
+
+function tryBuild(x,y,isDrag){
+  if(!inB(x,y))return;
+  const t=grid[y][x];
+  if(tool==='inspect'){selected={x,y};renderInfo();return;}
+  if(tool==='bulldoze'){
+    if(t.struct==='canal'||t.struct==='dam'||t.struct==='farm'||t.struct==='village'||t.struct==='lake'){
+      const refund={canal:2,dam:17,farm:12,village:25,lake:8}[t.struct]||0;
+      let wback=0;if(t.struct==='village'&&(t.level||0)>0){wback=2*(t.level||0);wood+=wback;}
+      money+=refund;t.struct=null;t.level=0;t.vPop=0;t.water=false;t.stale=false;t.broken=false;t.abandoned=false;computeWater();updateHUD();sfx(300,0.08,'square',0.06);log(`Bulldozed (${x},${y}) +$${refund}${wback?` +${wback}🪵`:''}.`);
+    }
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='canal'){
+    if(t.base==='source'){if(!isDrag){log('⛔ Spring itself already flows. Dig downhill from it.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.base==='rock'){if(!isDrag){log('⛔ Solid rock! Mine it first (⛏️, 1 click, 15s), then dig.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.base==='tree'&&nightLeft>0){if(!isDrag){log('🌙 No clearing trees at night!');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.struct!==null){return;}
+    if(t.job){if(!isDrag)log('⛔ Work in progress here — wait for the timer!');return;}
+    // far fields (>10 rows from spring/lake water) need a lake first
+    if(rowsFromWater(y)>10){if(!isDrag){log('⛔ Too far from spring water (>10 rows)! Build a 🏞️ lake ($100, 2×3) out here first.');sfx(140,0.15,'sawtooth',0.08);}return;}
+    let cost=5;if(t.base==='tree')cost=8;
+    if(money<cost){if(!isDrag){log(`⛔ Need $${cost} for canal.`);sfx(140,0.15,'sawtooth',0.08);}return;}
+    money-=cost;if(t.base==='tree'){const w=t.bigTree?2:1;t.base='grass';t.bigTree=false;t.stump=true;t.job=null;wood+=w;if(!isDrag)log(`🪵 Cleared a tree → +${w} wood.`);}t.struct='canal';
+    computeWater();updateHUD();sfx(520+Math.random()*120,0.06,'triangle',0.07);if(t.water)flowSnd();else if(t.stale)drip();tutDone('canal');
+    return;
+  }
+  if(tool==='chop'){
+    if(nightLeft>0){if(!isDrag)log('🌙 No chopping at night — crews rest till dawn!');return;}
+    if(!(t.base==='tree'&&t.struct===null)){if(!isDrag){log(t.struct!==null?'⛔ Chop is for standing 🌳 trees — clear buildings with 🧹.':'⛔ No tree here. Forests crowd the mountain slopes!');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.job){if(!isDrag){const s=Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000));log(`⏳ Already chopping @(${x},${y}) — ${s}s left.`);}return;}
+    if(!countHit(x,y,isDrag))return;
+    t.job={kind:'chop',doneAt:performance.now()+(t.bigTree?CHOP_MS*2:CHOP_MS),total:(t.bigTree?CHOP_MS*2:CHOP_MS)/1000,big:!!t.bigTree};
+    sfx(180,0.08,'square',0.09);updateHUD();tutDone('chop');
+    if(!isDrag)log(`🪓 Chopping ${t.bigTree?'BIG tree ':''}@(${x},${y}) — timber in ${t.bigTree?20:10}s…`);
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='mine'){
+    if(nightLeft>0){if(!isDrag)log('🌙 No mining at night — crews rest till dawn!');return;}
+    if(!(t.base==='rock'&&t.struct===null)){if(!isDrag){log(t.base==='source'?'⛔ The spring needs no mining.':'⛔ Nothing to mine — aim at grey barrier rock (rows 2–3).');sfx(140,0.15,'sawtooth',0.08);}return;}
+    if(t.job){if(!isDrag){const s=Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000));log(`⏳ Already mining @(${x},${y}) — ${s}s left.`);}return;}
+    if(!countHit(x,y,isDrag))return;
+    t.job={kind:'mine',doneAt:performance.now()+MINE_MS,total:MINE_MS/1000};
+    sfx(120,0.07,'square',0.09);updateHUD();tutDone('mine');
+    if(!isDrag)log(`⛏️ Mining @(${x},${y}) — cleared in 15s…`);
+    selected={x,y};renderInfo();return;
+  }
+  if(isDrag)return;
+  if(tool==='expand'){
+    if(t.struct==='village'&&(t.level||0)<4){
+      if(t.broken){log('⛔ Mend it first (🔨: 4🪨)!');sfx(140,0.15,'sawtooth',0.08);return;}
+      if(t.abandoned){log('🏚️ Abandoned — settlers return at midday census once farms allow!');sfx(140,0.15,'sawtooth',0.08);return;}
+      const wNeed=6+2*(t.level||0), mNeed=30*Math.pow(2,t.level||0);
+      if(wood<wNeed){log(`⛔ Level ${t.level+1} needs ${wNeed}🪵 (have ${wood}).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      if(money<mNeed){log(`⛔ Level ${t.level+1} also needs $${mNeed}.`);sfx(140,0.15,'sawtooth',0.08);return;}
+      wood-=wNeed;money-=mNeed;t.level=(t.level||0)+1;
+      const before=t.vPop||2;t.vPop=Math.min(maxPop(t.level),before*2);t.pBump=performance.now();
+      computeWater();updateHUD();sfx(523,0.15,'sine',0.1);setTimeout(()=>sfx(784,0.2,'sine',0.1),120);
+      log(t.level>=4?`🏙️ HIGH-RISE @(${x},${y})! ${before}→${t.vPop}👪 — max level, 24 max!`:`🏘️ House @(${x},${y}) → level ${t.level}! ${before}→${t.vPop}👪 (max ${maxPop(t.level)}).`);tutDone('expand');
+    } else if(t.struct==='village'){log('Already max level (24👪 high-rise)!');}
+    else{log('⛔ Expand works on a 🏠 house (4 levels to high-rise).');sfx(140,0.15,'sawtooth',0.08);}
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='dam'){
+    if(t.base==='source'){log('⛔ The spring needs no dam.');sfx(140,0.15,'sawtooth',0.08);return;}
+    if(t.base==='rock'){log('⛔ Solid rock! Mine it (⛏️) first.');sfx(140,0.15,'sawtooth',0.08);return;}
+    if(t.struct==='dam'){log('Already a dam here.');return;}
+    if(t.struct==='canal'){
+      if(t.stale){log('⛔ That water is stale brown — dams need BLUE water within range!');sfx(140,0.15,'sawtooth',0.08);return;}
+      const dUpCost=Math.round(30*priceMult('dam'));
+      if(money<dUpCost){log(`⛔ Dam upgrade costs $${dUpCost} (+65% every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      money-=dUpCost;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
+      log(t.water?`🚧 Dam online at (${x},${y}) — pressure reset, +${MAX_REACH} tiles!`:`🚧 Dam built at (${x},${y}) but DRY — it must be within ${MAX_REACH} of water to turn on.`);
+    } else if(t.struct===null&&(t.base==='grass'||t.base==='desert')){
+      if(rowsFromWater(y)>10){log('⛔ Too far from spring water (>10 rows)! Build a 🏞️ lake ($100, 2×3) out here first.');sfx(140,0.15,'sawtooth',0.08);return;}
+      const dNewCost=Math.round(35*priceMult('dam'));
+      if(money<dNewCost){log(`⛔ Dam costs $${dNewCost} here (+65% every 8 dams).`);sfx(140,0.15,'sawtooth',0.08);return;}
+      money-=dNewCost;t.struct='dam';computeWater();updateHUD();sfx(220,0.2,'square',0.1);tutDone('dam');
+      log(t.water?`🚧 Dam + canal built at (${x},${y}) — pressure reset!`:`🚧 Dam built at (${x},${y}) but DRY — connect it within ${MAX_REACH} tiles of water.`);
+    } else {log('⛔ Dams go on empty grass or an existing canal.');sfx(140,0.15,'sawtooth',0.08);return;}
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='farm'){
+    if(t.base!=='grass'||t.struct!==null){log('⛔ Farms go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
+    const fCost=Math.round(25*priceMult('farm'));
+    if(money<fCost){log(`⛔ Farm costs $${fCost} (+65% every 8 farms).`);sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=fCost;t.struct='farm';t.fProg=0;t.fStock=0;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('farm');log(`🌾 Farm built at (${x},${y}). Needs BLUE water + 1👪 worker, feeds 5!`);
+  }
+  if(tool==='village'){
+    if(t.base!=='grass'||t.struct!==null){log('⛔ Houses go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
+    const hCost=Math.round(50*priceMult('village'));
+    if(money<hCost){log(`⛔ House costs $${hCost} (+65% every 8 houses — ${structCount('village')} standing).`);sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=hCost;t.struct='village';t.level=0;t.vPop=2;t.pBump=performance.now();t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
+  }
+  if(tool==='mend'){
+    if((t.struct==='farm'||t.struct==='village')&&t.broken){
+      if(t.struct==='farm'){
+        if(wood<4){log(`⛔ Mending this farm needs 4🪵 (have ${wood}).`);sfx(140,0.15,'sawtooth',0.08);return;}
+        wood-=4;t.broken=false;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('mend');log(`🔨 Farm @(${x},${y}) mended for 4🪵!`);
+      } else {
+        if(stone<4){log(`⛔ Mending this house needs 4🪨 (have ${stone}). Mine barrier rock!`);sfx(140,0.15,'sawtooth',0.08);return;}
+        stone-=4;t.broken=false;t.pBump=performance.now();computeWater();updateHUD();sfx(523,0.12,'sine',0.1);tutDone('mend');log(`🔨 House @(${x},${y}) mended for 4🪨 — ${t.vPop}👪 return!`);
+      }
+    } else if(!isDrag){log(t.struct?'⛔ Only broken 🐾 farms/houses need mending.':'⛔ Nothing to mend here.');sfx(140,0.15,'sawtooth',0.08);}
+    selected={x,y};renderInfo();return;
+  }
+  if(tool==='lake'){
+    // anchor = NW corner of a 2×3 reservoir, $100 flat
+    const cells=[];let ok=true, why='';
+    for(let dy=0;dy<3&&ok;dy++)for(let dx=0;dx<2&&ok;dx++){
+      const nx=x+dx, ny=y+dy;
+      if(!inB(nx,ny)){ok=false;why='Lake needs 2×3 clear land — click with room to the south-east.';break;}
+      const c=grid[ny][nx];
+      if(c.struct||c.job||!(c.base==='grass'||c.base==='desert')){ok=false;why='Lake needs 2×3 clear land (no rock, trees, buildings).';break;}
+      cells.push([nx,ny]);
+    }
+    if(!ok){log('⛔ '+why);sfx(140,0.15,'sawtooth',0.08);return;}
+    if(money<500){log('⛔ Lake costs $500.');sfx(140,0.15,'sawtooth',0.08);return;}
+    money-=500;cells.forEach(([nx,ny])=>{grid[ny][nx].struct='lake';});
+    computeWater();updateHUD();sfx(330,0.25,'sine',0.1);tutDone('lake');
+    log(`🏞️ Lake built @(${x},${y})! Reservoir waters 4 tiles around it.`);
+    selected={x,y};renderInfo();return;
+  }
+  selected={x,y};renderInfo();
+}
+
+// simulation tick = 0.8s real (~6 game-minutes); 225 ticks = one 3-minute day
+function simTick(){
+  totalTicks++;tickInDay++;
+  if(nightLeft>0){nightLeft--;if(nightLeft===0){
+    document.getElementById('hint').textContent='☀️ Dawn breaks. Mend (🔨) what the beasts wrecked — farms 4🪵, houses 4🪨!';
+    firstNightDone=true;renderTut();
+    let wrecked=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.broken&&(t.struct==='farm'||t.struct==='village'))wrecked++;}
+    if(wrecked>0){
+      document.getElementById('mendAlertTxt').innerHTML=`🐾 <b>Night's damage: ${wrecked} broken building${wrecked>1?'s':''}!</b><br>Grab the 🔨 Mend tool — farms cost 4🪵, houses 4🪨.`;
+      document.getElementById('mendAlert').classList.remove('hidden');
+    }
+  }}
+  let harvests=0, workers=totalPop();
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
+    const t=grid[y][x];
+    if(t.struct==='farm'&&t.water&&!t.broken&&workers>0&&t.fStock<5){workers--;t.fProg++;if(t.fProg>=2){t.fProg=0;t.fStock=Math.min(5,t.fStock+1);t.fBump=performance.now();food++;harvests++;money+=0.5;}}
+    if(t.struct==='farm'&&!t.water){t.fProg=0;}
+  }
+  if(harvests>0&&totalTicks%4===0)sfx(980,0.07,'triangle',0.03);
+  if(tickInDay===Math.floor(TICKS_PER_DAY/2)){
+    // midday census: 1 worker runs 1 farm, 1 farm feeds 5 people
+    // stumps grow back every half day
+    let reg=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.stump&&t.base==='grass'&&!t.struct&&!t.job){t.base='tree';t.stump=false;t.bigTree=false;reg++;}}
+    if(reg>0){log(`🌱 ${reg} stump${reg>1?'s':''} grew back into trees!`);makeBigTrees();}
+    let F=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.struct==='farm'&&t.water&&!t.broken)F++;}
+    const P=totalPop();
+    if(F>P)log(`👷 ${F-P} farm${F-P>1?'s':''} idle — each farm needs 1👪 worker!`);
+    if(P>F*5){
+      let bx=-1,by=-1,best=0;
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+        if(t.struct==='village'&&!t.broken&&!t.abandoned&&t.vPop>best){best=t.vPop;bx=x;by=y;}}
+      if(best>0){grid[by][bx].vPop=0;grid[by][bx].abandoned=true;updateHUD();sfx(196,0.4,'sawtooth',0.06);log(`🏚️ House @(${bx},${by}) ABANDONED! ${F} farm${F===1?'':'s'} feed ${F*5}👪 but the valley holds ${P}. Build more farms!`);
+        document.getElementById('farmAlertTxt').innerHTML=`⚠️ <b>More farms needed!</b><br>${F} farm${F===1?'':'s'} feed${F===1?'s':''} ${F*5}👪 but the valley holds ${P} — a house was abandoned!`;
+        document.getElementById('farmAlert').classList.remove('hidden');}
+      else{log('⚠️ Starving valley — not enough farms, and no inhabited houses left!');
+        document.getElementById('farmAlertTxt').innerHTML=`⚠️ <b>More farms needed!</b><br>${F} farm${F===1?'':'s'} feed${F===1?'s':''} ${F*5}👪 but the valley holds ${P} — build farms now!`;
+        document.getElementById('farmAlert').classList.remove('hidden');}
+    } else {
+      let rx=-1,ry=-1;
+      for(let y=0;y<ROWS&&rx<0;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+        if(t.struct==='village'&&!t.broken&&t.abandoned){rx=x;ry=y;break;}}
+      if(rx>=0){grid[ry][rx].vPop=2;grid[ry][rx].pBump=performance.now();grid[ry][rx].abandoned=false;updateHUD();sfx(660,0.12,'sine',0.08);log(`🏠 Settlers return to @(${rx},${ry})! +2👪 (farms suffice).`);}
+    }
+  }
+  // 🤖 crews fell trees on their own once population hits 50 (never at night)
+  if(nightLeft===0&&totalPop()>=50){
+    if(!autoChopOn){autoChopOn=true;log('🤖 Population hit 50! Work crews now fell trees on their own.');sfx(660,0.15,'sine',0.1);}
+    let auto=0;const cands=[];
+    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+      if(t.job&&t.job.auto)auto++;
+      else if(t.base==='tree'&&!t.struct&&!t.job)cands.push([x,y]);}
+    while(auto<3&&cands.length){const k=(Math.random()*cands.length)|0;const [cx2,cy2]=cands.splice(k,1)[0];const t=grid[cy2][cx2];const ms=t.bigTree?CHOP_MS*2:CHOP_MS;t.job={kind:'chop',doneAt:performance.now()+ms,total:ms/1000,big:!!t.bigTree,auto:true};auto++;}
+  }
+  // 🛶 residents paddle the waterways to other parts of the village
+  {
+    const want=Math.min(10,Math.floor(totalPop()/6));
+    if(paddlers.length>want)paddlers.length=want;
+    if(paddlers.length<want){const w=waterTiles();if(w.length){const [sx,sy]=w[(Math.random()*w.length)|0];paddlers.push({x:sx,y:sy,tx:sx,ty:sy,vx:1,vy:0});}}
+  }
+  // 🚧 first-dam prompt (farm-alarm style, once per valley)
+  if(!damPromptShown){
+    let need=false;
+    for(let y=0;y<ROWS&&!need;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+      if((t.struct==='canal'||t.struct==='dam')&&(t.stale||(t.water&&t.dist>=MAX_REACH))){need=true;break;}}
+    if(need){damPromptShown=true;
+      document.getElementById('damAlertTxt').innerHTML=`🚧 <b>A dam is needed!</b><br>Water runs brown past 4 tiles — upgrade a <b>4/4 canal</b> (🚧) to push blue water further!`;
+      document.getElementById('damAlert').classList.remove('hidden');sfx(440,0.2,'square',0.08);}
+  }
+  if(tickInDay>=TICKS_PER_DAY){
+    tickInDay=0;day++;
+    const pop=totalPop();
+    let canals=0;for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++)if(grid[y][x].struct==='canal'||grid[y][x].struct==='dam')canals++;
+    const upkeep=Math.floor(canals/8);
+    money-=upkeep;
+    log(`☀️ Day ${day}: -$${upkeep} canal upkeep (pop ${pop}, taxes flow $0.50👪/s live). Goal: ${currentGoal()}👪.`);
+    if(Math.random()<0.18&&day>2){
+      food+=4;money+=5;log('🌧️ Mountain rain! +4 food, farms surge.');sfx(600,0.3,'sine',0.05);
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];if(t.struct==='farm'&&!t.water){food++;}}
+    }
+    // 🌙 NIGHT: wolves & bears break 20% (grassy plains) / 30% (snowy tundra) of outer farms/houses
+    nightLeft=NIGHT_TICKS;
+    paddlers=[]; // everyone rows home before dark
+    howl();
+    {
+      // beasts only stalk the OUTER line: buildings touching non-building tiles
+      const all=[];
+      for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+        if((t.struct==='farm'||t.struct==='village')&&!t.broken&&!t.abandoned)all.push([x,y]);}
+      const outer=all.filter(([x,y])=>neighbors(x,y).some(([nx,ny])=>{if(!inB(nx,ny))return true;const s=grid[ny][nx].struct;return s!=='farm'&&s!=='village';}));
+      const pool=outer.length?outer:all;
+      for(let i=pool.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]];}
+      const hit=pool.slice(0,Math.ceil(pool.length*nightRate()));
+      hit.forEach(([x,y])=>{grid[y][x].broken=true;});
+      animals=hit.map(([x,y],i)=>({x,y,kind:i%2?'🐻':'🐺',scares:0}));lastWard='';
+      document.getElementById('hint').textContent='🌙 Wave your mouse VIGOROUSLY over each beast 15× to chase it off and save the building!';
+      if(hit.length)log(`🌙 Night falls (Day ${day}): wolves & bears broke ${hit.length} outer building${hit.length>1?'s':''} (🐾)! Mend prompt comes at dawn.`);
+      else log(`🌙 Night falls (Day ${day}): all quiet — no buildings to raid.`);
+    }
+    if(day%3===0)expandGrid();
+    else log(`🗺️ Valley expansion in ${3-day%3} day${3-day%3>1?'s':''} (every 3rd dawn).`);
+    regrowTrees();
+    makeBigTrees();
+  }
+  computeWater();updateHUD();
+}
+
+function checkWin(){
+  if(won||!grid||!grid.length)return;
+  if(totalPop()>=currentGoal()){won=true;sfx(523,0.4,'sine',0.12);setTimeout(()=>sfx(784,0.5,'sine',0.12),200);
+    document.getElementById('overlay').classList.remove('hidden');
+    document.getElementById('overlayBox').innerHTML=`<h2>congratulations!</h2><p>You reached <b>${totalPop()} people</b>! Keep playing 'grassy plains', or advance to level 2 'snowy tundra'?</p><div style="display:flex;gap:8px;flex-wrap:wrap"><button class="primary" onclick="document.getElementById('overlay').classList.add('hidden')">Keep playing 'grassy plains'</button><button onclick="advanceLevel()">Advance to level 2 'snowy tundra'</button></div>`;}
+}
+
+function updateHUD(){
+  document.getElementById('sMoney').textContent='$'+Math.floor(money);
+  document.getElementById('sFood').textContent=food;
+  document.getElementById('sWood').textContent=wood;
+  document.getElementById('sStone').textContent=stone;
+  document.getElementById('sPop').textContent=totalPop();
+  document.getElementById('sWater').textContent=countWatered();
+  const hrs=String((6+Math.floor(tickInDay/TICKS_PER_DAY*24))%24).padStart(2,'0');
+  document.getElementById('sDay').textContent=`Day ${day} ${hrs}:00`;
+  document.getElementById('sLevel').textContent=level;
+  document.getElementById('sLevelName').textContent=level===2?'🗺️ Snowy Tundra':'🗺️ Grassy Plains';
+  document.getElementById('goalTxt').textContent=`(${totalPop()}/${currentGoal()})`;
+  document.getElementById('goalfill').style.width=Math.min(100,totalPop()/currentGoal()*100)+'%';
+  checkWin();
+  document.getElementById('sMoney').style.color=money<20?'#f87171':'#fde047';
+  document.getElementById('sFood').style.color=food<=2?'#f87171':'#fff';
+  refreshToolPrices();showToolDesc();
+  renderInfo();
+}
+
+function renderInfo(){
+  const el=document.getElementById('info');
+  if(!selected){el.innerHTML='Click any tile to inspect it.';return;}
+  const {x,y}=selected,t=grid[y][x];
+  let baseName={grass:y===0?'High crag meadow':'Meadow',rock:(y===1||y===2)?'Rock barrier 🧱':'Rock',tree:'Forest',source:'Spring ❄',desert:'Sun-cracked desert'}[t.base];
+  const rangeTxt=(t.struct==='canal'||t.struct==='dam')?(t.water?` ${t.struct==='dam'?'0':t.dist}/${MAX_REACH} from melt`:t.stale?` STALE — past ${MAX_REACH}, add 🚧 dam upstream!`:` DRY — not connected to water`):'';
+  const structName={
+    canal:t.water?`Canal — flowing blue 💧${rangeTxt}`:(t.stale?`Canal — STALE brown water 🟤${rangeTxt}`:`Canal — dry${rangeTxt}`),
+    dam:t.water?`Dam — BOOSTING 💧 (resets to 0/${MAX_REACH})`:(t.stale?`Dam — STALE (feed it within ${MAX_REACH})`:`Dam — DRY ⚠️ (feed it within ${MAX_REACH} to switch on)`),
+    farm:t.broken?`Farm — BROKEN 🐾 (mend: 4🪵)`:t.water?`Farm — watered 💧, stock ${t.fStock}`:'Farm — THIRSTY ⚠️ (needs BLUE water beside it)',
+    village:t.broken?`House — BROKEN 🐾 (mend: 4🪨)`:t.abandoned?`Abandoned house 🏚️ (empty)`:`${(t.level||0)>=4?'HIGH-RISE':(t.level||0)>0?`House Lv${t.level}`:'House'} — ${t.vPop}👪/${maxPop(t.level||0)}`,
+    lake:'Lake — reservoir 💧 (new 0/4 source)'}[t.struct]||'—';
+  let extra='';
+  if(!t.struct&&t.base==='tree')extra=t.job?`🌳 Being chopped — ~${Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000))}s to +2🪵!`:`A 🌳 tree — one 🪓 click, timber in 10s! (+2🪵)`;
+  else if(!t.struct&&t.base==='rock')extra=t.job?`⛏️ Mining… ~${Math.max(1,Math.ceil((t.job.doneAt-performance.now())/1000))}s left!`:((y===1||y===2)?'Rock barrier (rows 2–3) — one ⛏️ click, cleared in 15s, then dig canal!':'Rock — one ⛏️ click, cleared in 15s, then dig canal!');
+  else if(t.base==='source')extra='Spring water! Feeds 4 tiles — brown past 4, then needs a dam or lake.';
+  else if(t.base==='desert'&&!t.struct)extra='Cracked desert — no trees, but canals, farms and houses all work here!';
+  else if(!t.struct)extra='Good plain land. Build here.';
+  el.innerHTML=`<b>(${x},${y}) ${baseName}</b><br>${t.struct?structName:'Empty '+baseName.toLowerCase()+'.'}<br><span style="opacity:.7">${t.struct==='farm'?(t.broken?'🐾 Broken by wild animals! Mend with 🔨 (4🪵).':'Makes 1🌾 / 2 ticks if watered (brown N/A, max 5 stock). Needs 1👪 worker, feeds 5 — midday census!'):t.struct==='village'?(t.broken?'🐾 Broken! Mend with 🔨 (4🪨) to bring them home.':t.abandoned?'🏚️ Empty — settlers return at midday census once farms allow (1 farm feeds 5👪).':((t.level||0)>=4?'High-rise home: 24 max. Build MORE houses — goal is 150!':`Level ${t.level||0} home (+2👪 on build). Upgrade ×${4-(t.level||0)} more to high-rise 24! Midday census: unfed houses go abandoned!`+(wood>=6+2*(t.level||0)&&money>=30*Math.pow(2,t.level||0)?` Next Lv${(t.level||0)+1}: ${6+2*(t.level||0)}🪵+$${30*Math.pow(2,t.level||0)} — EXPAND!`:` Next Lv${(t.level||0)+1} costs ${6+2*(t.level||0)}🪵+$${30*Math.pow(2,t.level||0)}.`))):t.struct==='canal'?(t.stale?`Stale brown water — connected but past ${MAX_REACH} tiles. Chain a 🚧 dam upstream!`:`Carries snowmelt downhill. Dies after ${MAX_REACH} tiles (brown) — chain a 🚧 dam.`):t.struct==='dam'?'Booster: if fed blue water, resets canal range to 0/4 downstream. $30 on canal, $35 on grass.':extra}</span>`;
+}
+
+// ================= TOP-DOWN RENDERING =================
+function updateWorld(){
+  // frame-rate-independent sim, moved out of draw(): job timers, greening, paddlers
+  const nowMs=performance.now();
+  const dtG=Math.min(2,(nowMs-(lastGreenMs||nowMs))/1000);lastGreenMs=nowMs;
+  let anyJob=false, finished=false, greened=0;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+    if(t.job){
+      if(paused){t.job.doneAt+=dtG*1000;}
+      else if(nowMs>=t.job.doneAt){
+        if(t.job.kind==='chop'){const w=t.job.big?4:2;t.base='grass';t.bigTree=false;t.stump=true;wood+=w;log(`🪓 Timber! @(${x},${y}) → +${w}🪵 wood (${wood} total).`);sfx(660,0.12,'sine',0.1);}
+        else{t.base='grass';stone+=2;log(`⛏️ Rock cleared @(${x},${y}) → +2🪨 stone (${stone} total). Dig your canal through.`);sfx(440,0.15,'square',0.1);}
+        t.job=null;finished=true;
+      } else anyJob=true;
+    }
+    // desert beside BLUE water greens up after 30s
+    if(t.base==='desert'&&!paused){
+      const wet=neighbors(x,y).some(([nx,ny])=>{const n=grid[ny][nx];return n.water&&(n.base==='source'||n.struct==='canal'||n.struct==='dam'||n.struct==='lake');});
+      if(wet){t.greenT+=dtG;if(t.greenT>=30){t.base='grass';t.greenT=0;greened++;}}
+      else t.greenT=0;
+    }
+  }
+  if(finished||greened>0){if(greened>0)log(`🌱 ${greened} desert tile${greened>1?'s':''} turned green beside the water!`);computeWater();updateHUD();}
+  else if(anyJob){const s=Math.floor(nowMs/1000);if(s!==hudSec){hudSec=s;updateHUD();}}
+  // paddlers glide toward their targets along blue water (frozen while paused)
+  if(!paused)for(const p of paddlers){
+    const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy);
+    if(d<0.05){
+      const opts=[];
+      for(const [nx,ny] of neighbors(Math.round(p.x),Math.round(p.y))){const n=grid[ny][nx];
+        if(n.base==='source'||((n.struct==='canal'||n.struct==='dam'||n.struct==='lake')&&n.water))opts.push([nx,ny]);}
+      if(opts.length){const [nx,ny]=opts[(Math.random()*opts.length)|0];p.tx=nx;p.ty=ny;}
+    } else {const step=Math.min(d,dtG*1.6);p.x+=dx/d*step;p.y+=dy/d*step;p.vx=dx/d;p.vy=dy/d;}
+  }
+}
+function paintBackdrop(){
+  const bg=ctx.createLinearGradient(0,0,0,cv.height);
+  bg.addColorStop(0,'#0d1f30');bg.addColorStop(0.55,'#0b1a2b');bg.addColorStop(1,'#080f18');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,cv.width,cv.height);
+  const gl=ctx.createRadialGradient(OX,OY+190,40,OX,OY+190,430);
+  gl.addColorStop(0,'rgba(70,130,180,.15)');gl.addColorStop(1,'rgba(70,130,180,0)');
+  ctx.fillStyle=gl;ctx.fillRect(0,0,cv.width,cv.height);
+}
+function paintCross(){
+  // red placement cross on the hovered square's middle (builds land here)
+  if(!(hover&&tool!=='inspect'))return;
+  const F=tileFrame(hover.x,hover.y), hx=(F.N.x+F.S.x)/2, hy=(F.N.y+F.S.y)/2;
+  const a=Math.max(3,TW*0.135);
+  ctx.save();ctx.lineCap='round';
+  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=4.5;
+  ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
+  ctx.strokeStyle='#ef2b2b';ctx.lineWidth=2.25;
+  ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
+  ctx.restore();
+}
+function paintPaddlers(){
+  paddlers.forEach((p,i)=>{
+    const bob=Math.abs(Math.sin(flowPhase*3+i*1.7))*2;
+    const sx=isoCX(p.x,p.y), sy=isoCY(p.x,p.y)-4-bob;
+    const gd=gridDirScreen(p.vx||1,p.vy||0), ang=Math.atan2(gd.y,gd.x);
+    ctx.save();ctx.translate(sx,sy);ctx.rotate(ang+Math.PI/2);
+    ctx.font='17px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🛶',0,0);ctx.restore();
+    ctx.fillStyle='#f2c89b';ctx.beginPath();ctx.arc(sx,sy-2,4,0,7);ctx.fill();
+    ctx.fillStyle='#3a6ea5';ctx.fillRect(sx-3,sy+1,6,5);
+  });
+}
+function paintTutRocks(){
+  if(tut.canal)return;
+  let sx=-1;for(let x=0;x<COLS;x++)if(grid[0][x].base==='source'){sx=x;break;}
+  if(sx<0)return;
+  let marked=0;
+  for(let y=1;y<ROWS&&marked<2;y++){if(grid[y][sx].base==='rock'&&!grid[y][sx].struct){
+    const F2=tileFrame(sx,y);
+    ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=3;ctx.setLineDash([6,4]);ctx.lineDashOffset=-flowPhase*20;
+    ctx.shadowColor='#ffd54a';ctx.shadowBlur=10;
+    polyPath([F2.N,F2.E,F2.S,F2.W]);ctx.stroke();ctx.restore();marked++;
+  }}
+}
+function paintArrows(){
+  const bob=Math.sin(flowPhase*5)*4;let shown=0;
+  for(let y=0;y<ROWS&&shown<14;y++)for(let x=0;x<COLS&&shown<14;x++){
+    const t=grid[y][x];if(t.struct!=='canal')continue;
+    if(!(t.water&&t.dist===MAX_REACH))continue;shown++;
+    const cx=isoCX(x,y), cy=isoCY(x,y), ay=cy-TH/2-14+bob;
+    ctx.fillStyle='#ef2b2b';ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx-8,ay-8);ctx.lineTo(cx+8,ay-8);ctx.lineTo(cx,ay+3);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+}
+function paintNightAnimals(){
+  if(nightLeft<=0)return;
+  ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  animals.forEach((a,i)=>{
+    const ax=isoCX(a.x,a.y)+Math.sin(flowPhase*1.6+i*2.1)*9;
+    const ay=isoCY(a.x,a.y)-6+Math.abs(Math.sin(flowPhase*2.2+i*1.3))*5;
+    const shake=a.scares>0?Math.sin(flowPhase*14+i)*Math.min(4,a.scares/5):0;
+    ctx.fillText(a.kind,ax+shake,ay);
+    const bw=34, bfrac=Math.max(0,1-a.scares/15);
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(ax-bw/2,ay-22,bw,5);
+    ctx.fillStyle='#ef2b2b';ctx.fillRect(ax-bw/2,ay-22,bw*bfrac,5);
+  });
+}
+function paintNightOverlay(){
+  if(nightLeft<=0)return;
+  ctx.fillStyle='rgba(6,8,30,.55)';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌙',cv.width/2,cv.height/2-16);
+  ctx.fillStyle='#dbe7ff';ctx.font='bold 20px sans-serif';ctx.fillText(`NIGHT ${day} — wave over beasts 15× to scare them!`,cv.width/2,cv.height/2+22);
+}
+function paintPaused(){
+  if(!paused)return;
+  ctx.fillStyle='rgba(120,130,140,.55)';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('paused',cv.width/2,cv.height/2);
+}
+function buildPaintOrder(){
+  const order=[];
+  const M=7;
+  for(let gy=-M;gy<ROWS+M;gy++)for(let gx=-M;gx<COLS+M;gx++){
+    const F=tileFrame(gx,gy);order.push([F.k,gx,gy,F]);
+  }
+  order.sort((a,b)=>a[0]-b[0]);
+  return order;
+}
+function faceInfo(F){
+  // the two block faces toward the viewer at the current turntable angle
+  const c=Math.cos(view.rot), s=Math.sin(view.rot);
+  const usePX=(c+s)>=0, usePY=(c-s)>=0;
+  const mid=(A,B)=>({x:(A.x+B.x)/2,y:(A.y+B.y)/2});
+  const mNE=mid(F.N,F.E), mES=mid(F.E,F.S), mSW=mid(F.S,F.W), mWN=mid(F.W,F.N);
+  return {vis:[usePX?'+x':'-x', usePY?'+y':'-y'],
+    polys:{'+x':[mNE,F.E,mES],'-x':[mWN,F.W,mSW],'+y':[mSW,F.S,mES],'-y':[mWN,F.N,mNE]}};
+}
+function skirtPoly(P,fill,dep){ctx.fillStyle=fill;ctx.beginPath();
+  ctx.moveTo(P[0].x,P[0].y);ctx.lineTo(P[1].x,P[1].y);ctx.lineTo(P[2].x,P[2].y);
+  ctx.lineTo(P[2].x,P[2].y+dep);ctx.lineTo(P[1].x,P[1].y+dep);ctx.lineTo(P[0].x,P[0].y+dep);
+  ctx.closePath();ctx.fill();}
+function paintBlock(t,x,y,F){
+  const depth=(y<=2)?TH*1.5:TH*0.7;
+  let sideL='#2c5f31', sideR='#3a7d40';
+  if(t.base==='desert'){sideL='#a3804e';sideR='#c09a5e';}
+  else if(t.base==='rock'||t.base==='source'){sideL='#454b54';sideR='#596069';}
+  if(level===2&&(t.base==='grass'||t.base==='tree')){sideL='#8fa3bd';sideR='#a9bed6';}
+  const info=faceInfo(F);
+  info.vis.forEach(k=>{
+    const P=info.polys[k], pmx=(P[0].x+P[1].x+P[2].x)/3;
+    skirtPoly(P,pmx<F.cx?sideL:sideR,depth);});
+}
+function paintDeco(x,y,F){
+  const cx=F.cx, cy=F.cy, N=F.N, E=F.E, S=F.S, W=F.W;
+  const dxo=x<0?-x:x>=COLS?x-COLS+1:0, dyo=y<0?-y:y>=ROWS?y-ROWS+1:0;
+  const dd=Math.max(dxo,dyo), fade=dd<=3?1:dd>=7?0:1-(dd-3)/4;
+  if(fade<=0)return;
+  ctx.save();ctx.globalAlpha=fade;
+  const h1=hash2(x*2+7,y*3+1), checker=(x+y)%2===0, snowy=level===2;
+  const info=faceInfo(F);
+  const shadeBoth=(dep)=>{info.vis.forEach(k=>{
+    const P=info.polys[k], pmx=(P[0].x+P[1].x+P[2].x)/3;
+    skirtPoly(P,pmx<cx?'#3d454f':'#4a525c',dep);});};
+  if(y<0){
+    const tall=y<-2, dep=TH*(tall?2.4:1.8);
+    shadeBoth(dep);
+    polyFill([N,E,S,W],tall?'#6a7683':'#5d6b7d');
+    if(tall||h1<0.6){ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(cx-5,cy-2,3,0,7);ctx.fill();ctx.beginPath();ctx.arc(cx+6,cy+3,2.4,0,7);ctx.fill();}
+  } else if(y<=2){
+    info.vis.forEach(k=>{const P=info.polys[k], pmx=(P[0].x+P[1].x+P[2].x)/3;
+      skirtPoly(P,pmx<cx?'#454b54':'#596069',TH*1.2);});
+    polyFill([N,E,S,W],checker?'#6e7683':'#656d7a');
+    ctx.strokeStyle='rgba(20,24,32,.55)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo((N.x+E.x)/2,(N.y+E.y)/2);ctx.lineTo(cx,cy+TH*0.2);ctx.stroke();
+  } else if(y>=ROWS-4){
+    info.vis.forEach(k=>{const P=info.polys[k], pmx=(P[0].x+P[1].x+P[2].x)/3;
+      skirtPoly(P,pmx<cx?'#a3804e':'#c09a5e',TH*0.7);});
+    polyFill([N,E,S,W],checker?'#d9b77c':'#cfa96f');
+    ctx.strokeStyle='rgba(120,85,40,.55)';ctx.lineWidth=1;
+    if(h1<0.5){ctx.beginPath();ctx.moveTo((W.x+N.x)/2,(W.y+N.y)/2);ctx.lineTo(cx,cy+2);ctx.lineTo((E.x+N.x)/2,(E.y+N.y)/2);ctx.stroke();}
+  } else {
+    if(snowy){info.vis.forEach(k=>{const P=info.polys[k], pmx=(P[0].x+P[1].x+P[2].x)/3;
+      skirtPoly(P,pmx<cx?'#8fa3bd':'#a9bed6',TH*0.7);});}
+    else{info.vis.forEach(k=>{const P=info.polys[k], pmx=(P[0].x+P[1].x+P[2].x)/3;
+      skirtPoly(P,pmx<cx?'#2c5f31':'#3a7d40',TH*0.7);});}
+    polyFill([N,E,S,W],snowy?(checker?'#e9eef6':'#dde5f0'):(checker?'#57a35e':'#4f9c55'));
+    if(snowy){
+      ctx.fillStyle='rgba(150,180,220,.55)';
+      if(h1<0.4){ctx.beginPath();ctx.arc(cx-8,cy-2,2.2,0,7);ctx.fill();}
+    } else {
+      if(h1<0.07)drawPine(cx,cy+1,TW*0.36,false);
+      else if(h1<0.16){ctx.fillStyle='#7d8794';ctx.beginPath();ctx.arc(cx,cy,5,0,7);ctx.fill();}
+      else if(h1<0.3){ctx.strokeStyle='rgba(30,90,40,.6)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(cx-6,cy+2);ctx.lineTo(cx-5,cy-4);ctx.stroke();}
+    }
+  }
+  ctx.restore();
+}
+function paintTerrain(t,x,y,F){
+  const cx=F.cx, cy=F.cy, N=F.N, E=F.E, S=F.S, W=F.W;
+  const snowLv=level===2, checker=(x+y)%2===0;
+  if(t.base==='source'){
+    const g=ctx.createLinearGradient(0,cy-TH/2,0,cy+TH/2);
+    g.addColorStop(0,'#cfeeff');g.addColorStop(1,'#5aa7e0');
+    polyFill([N,E,S,W],g);
+  } else if(y===0){
+    polyFill([N,E,S,W],'#5d6b7d'); // high mountain
+    ctx.fillStyle='rgba(255,255,255,.75)';
+    if(hash2(x,y)<0.5){ctx.beginPath();ctx.arc(cx-6,cy-2,3.2,0,7);ctx.fill();}
+    if(hash2(x*2+3,y*5+1)<0.4){ctx.beginPath();ctx.arc(cx+8,cy+3,2.6,0,7);ctx.fill();}
+    if(t.base==='rock'){ // 3D peak with snow cap
+      const pkH=TH*2.1, apx=cx, apy=cy-TH/2-pkH;
+      ctx.fillStyle='#4a525c';
+      ctx.beginPath();ctx.moveTo(cx-TW/2,cy);ctx.lineTo(cx,cy+TH/2);ctx.lineTo(apx,apy);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#5d6874';
+      ctx.beginPath();ctx.moveTo(cx+TW/2,cy);ctx.lineTo(cx,cy+TH/2);ctx.lineTo(apx,apy);ctx.closePath();ctx.fill();
+      ctx.fillStyle='#eef4fa';
+      ctx.beginPath();ctx.moveTo(apx,apy);ctx.lineTo(apx-TW*0.12,apy+pkH*0.28);ctx.lineTo(apx+TW*0.12,apy+pkH*0.28);ctx.closePath();ctx.fill();
+    }
+  } else if((y===1||y===2)&&t.base==='rock'){
+    polyFill([N,E,S,W],checker?'#6e7683':'#656d7a'); // twin barrier: grey cracked rock
+    ctx.strokeStyle='rgba(20,24,32,.55)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx-TW*0.3,cy-TH*0.15);ctx.lineTo(cx,cy+TH*0.2);ctx.lineTo(cx-TW*0.1,cy+TH*0.4);ctx.stroke();
+    ctx.beginPath();ctx.moveTo(cx+TW*0.3,cy-TH*0.1);ctx.lineTo(cx+TW*0.1,cy+TH*0.25);ctx.stroke();
+    ctx.strokeStyle='rgba(255,255,255,.25)';
+    ctx.beginPath();ctx.moveTo(cx-TW/2,cy);ctx.lineTo(cx,cy-TH/2);ctx.lineTo(cx+TW/2,cy);ctx.stroke();
+    if(t.job)jobOverlay(cx,cy,t,'⛏️','#ef2b2b');
+    else if(x%4===1){ctx.font='11px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillStyle='rgba(255,255,255,.55)';ctx.fillText('⛏️',cx,cy-2);}
+  } else if(t.base==='rock'){
+    polyFill([N,E,S,W],grassFill(x,y));
+    const br=TW*0.2; // boulder
+    ctx.fillStyle='#7d8794';ctx.beginPath();
+    ctx.moveTo(cx-br,cy+2);ctx.lineTo(cx-br*0.5,cy-br*0.9);ctx.lineTo(cx+br*0.6,cy-br*0.7);ctx.lineTo(cx+br,cy+2);ctx.closePath();ctx.fill();
+    ctx.fillStyle='#9aa5b1';ctx.beginPath();
+    ctx.moveTo(cx-br*0.5,cy-br*0.9);ctx.lineTo(cx+br*0.6,cy-br*0.7);ctx.lineTo(cx,cy-br*0.2);ctx.closePath();ctx.fill();
+    if(t.job)jobOverlay(cx,cy,t,'⛏️','#ef2b2b');
+  } else if(t.base==='tree'){
+    polyFill([N,E,S,W],y===0?'#5d6b7d':grassFill(x,y));
+    drawPine(cx,cy+2,TW*(t.bigTree?0.66:0.4),t.bigTree);
+    if(t.job)jobOverlay(cx,cy,t,'🪓','#ef2b2b');
+  } else if(t.base==='desert'){
+    polyFill([N,E,S,W],checker?'#d9b77c':'#cfa96f');
+    ctx.strokeStyle='rgba(120,85,40,.55)';ctx.lineWidth=1;
+    if(hash2(x*5,y*3)<0.4){ctx.beginPath();ctx.moveTo(cx-10,cy-4);ctx.lineTo(cx,cy+2);ctx.lineTo(cx+10,cy-4);ctx.stroke();}
+    if(hash2(x*7,y*5)<0.35){ctx.beginPath();ctx.moveTo(cx+2,cy);ctx.lineTo(cx+10,cy+6);ctx.stroke();}
+  } else {
+    polyFill([N,E,S,W],grassFill(x,y));
+    if(snowLv){
+      ctx.fillStyle='rgba(150,180,220,.55)';
+      if(hash2(x*7,y*13)<0.4){ctx.beginPath();ctx.arc(cx-8,cy-2,2.2,0,7);ctx.fill();}
+      if(hash2(x*5,y*11)<0.35){ctx.beginPath();ctx.arc(cx+9,cy+3,2.2,0,7);ctx.fill();}
+    } else {
+      if(hash2(x,y)<0.35){ctx.strokeStyle='rgba(30,90,40,.6)';ctx.lineWidth=1.5;
+        ctx.beginPath();ctx.moveTo(cx-10,cy+2);ctx.lineTo(cx-9,cy-4);ctx.moveTo(cx-7,cy+2);ctx.lineTo(cx-6,cy-5);ctx.stroke();}
+      if(hash2(x*5,y*7)<0.12){ctx.fillStyle='rgba(255,255,255,.8)';ctx.beginPath();ctx.arc(cx+10,cy+1,1.8,0,7);ctx.fill();}
+    }
+  }
+  ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=1;polyPath([N,E,S,W]);ctx.stroke();
+}
+function paintCrews(t,F){
+  if(!(t.job&&nightLeft===0&&houseCount()>=3))return;
+  const cx=F.cx, cy=F.cy;
+  const crew=t.job.kind==='mine'?5:(t.job.big?6:3);
+  const offs=[[-11,-9],[11,-9],[0,-13],[-15,-3],[15,-3],[0,-5]];
+  ctx.font='11px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  const wob2=Math.sin(flowPhase*6)*1.5;
+  for(let i=0;i<crew;i++)ctx.fillText('👷',cx+offs[i][0]*(TW/50),cy+offs[i][1]+wob2);
+}
+function paintSpring(t,F){
+  if(t.base!=='source')return;
+  const cx=F.cx, cy=F.cy;
+  ctx.fillStyle='#6a7683';ctx.beginPath();ctx.ellipse(cx,cy+2,TW*0.3,TH*0.28,0,0,7);ctx.fill();
+  ctx.fillStyle='#7d8694';ctx.beginPath();ctx.ellipse(cx-3,cy,TW*0.18,TH*0.16,0,0,7);ctx.fill();
+  const spH=TH*1.4;
+  ctx.strokeStyle='rgba(150,210,250,.9)';ctx.lineWidth=3;ctx.lineCap='round';
+  ctx.setLineDash([6,5]);ctx.lineDashOffset=-flowPhase*40;
+  for(let i=-1;i<=1;i++){
+    ctx.beginPath();ctx.moveTo(cx+i*6,cy-2);
+    ctx.quadraticCurveTo(cx+i*9,cy-spH*0.6,cx+i*5+Math.sin(flowPhase*4+i)*3,cy-spH);
+    ctx.stroke();
+  }
+  ctx.setLineDash([]);
+  ctx.fillStyle='rgba(255,255,255,.9)';
+  ctx.beginPath();ctx.ellipse(cx,cy-spH,10,4,0,0,7);ctx.fill();
+  for(let i=0;i<3;i++){const da=flowPhase*3+i*2.1;ctx.beginPath();ctx.arc(cx+Math.sin(da)*12,cy-spH*0.6+Math.cos(da*1.3)*4,1.8,0,7);ctx.fill();}
+  pill(cx,cy-TH/2-11,`spring 0/${MAX_REACH}`,9);
+}
+function paintSelection(x,y,F){
+  if(!(selected&&selected.x===x&&selected.y===y))return;
+  ctx.save();ctx.strokeStyle='#fff';ctx.lineWidth=2.5;ctx.shadowColor='#fff';ctx.shadowBlur=8;
+  polyPath([F.N,F.E,F.S,F.W]);ctx.stroke();ctx.restore();
+}
+function paintStructure(t,x,y,F){
+  if(t.struct==='canal'||t.struct==='dam')paintCanal(t,x,y,F);
+  else if(t.struct==='farm')paintFarm(t,x,y,F);
+  else if(t.struct==='village')paintHouse(t,x,y,F);
+  else if(t.struct==='lake')paintLake(t,x,y,F);
+}
+function paintCanal(t,x,y,F){
+  const cx=F.cx, cy=F.cy, N=F.N, E=F.E, S=F.S, W=F.W;
+  const isDam=t.struct==='dam';
+  const bodyCol=t.water?'#2aa7e0':t.stale?'#8a6a3b':'#9a7b4f';
+  const wet=(nx,ny)=>{if(!inB(nx,ny))return false;const n=grid[ny][nx];
+    if(n.base==='source'||n.struct==='lake')return true;
+    return (n.struct==='canal'||n.struct==='dam')&&(n.water||n.stale);};
+  const IQ=insetC(F,0.62);
+  const joinCol=t.water?'#2aa7e0':t.stale?'#8a6a3b':null;
+  if(joinCol){ // arms reach the shared edges so joined streams merge
+    ctx.fillStyle=joinCol;
+    const armTo=(A,B)=>{
+      const ex=(A.x+B.x)/2, ey=(A.y+B.y)/2;
+      const dx=ex-cx, dy=ey-cy, len=Math.hypot(dx,dy)||1;
+      const pxn=-dy/len*TH*0.24, pyn=dx/len*TH*0.24;
+      ctx.beginPath();ctx.moveTo(cx,cy);ctx.lineTo(ex+pxn,ey+pyn);ctx.lineTo(ex-pxn,ey-pyn);ctx.closePath();ctx.fill();
+    };
+    if(wet(x+1,y))armTo(E,S);
+    if(wet(x-1,y))armTo(W,N);
+    if(wet(x,y+1))armTo(W,S);
+    if(wet(x,y-1))armTo(N,E);
+  }
+  polyFill([IQ.N,IQ.E,IQ.S,IQ.W],bodyCol);
+  ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1.5;polyPath([IQ.N,IQ.E,IQ.S,IQ.W]);ctx.stroke();
+  if(t.water){
+    if(isDam){
+      const ax1=cx-(E.x-W.x)*0.26, ay1=cy-(E.y-W.y)*0.26;
+      const ax2=cx+(E.x-W.x)*0.26, ay2=cy+(E.y-W.y)*0.26;
+      const nx=-(ay2-ay1), ny=(ax2-ax1), nl=Math.hypot(nx,ny)||1, hw=4;
+      const ux=nx/nl*hw, uy=ny/nl*hw;
+      ctx.fillStyle='#6b4a2c';ctx.beginPath();
+      ctx.moveTo(ax1+ux,ay1+uy);ctx.lineTo(ax2+ux,ay2+uy);ctx.lineTo(ax2-ux,ay2-uy);ctx.lineTo(ax1-ux,ay1-uy);
+      ctx.closePath();ctx.fill();
+      ctx.fillStyle='#4a3018';
+      for(let i=0;i<4;i++){const f=0.12+i*0.25;
+        ctx.fillRect(ax1+(ax2-ax1)*f-1.5,ay1+(ay2-ay1)*f-4,3,4);}
+      ctx.font='12px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',cx,cy-13);
+    }
+        if(isDam){ctx.fillStyle='rgba(4,25,45,.85)';ctx.font='bold 9px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+        ctx.fillText('0/'+MAX_REACH,cx,cy+1);}
+    if(!isDam&&t.dist>=MAX_REACH-1){ctx.font='10px serif';ctx.fillText('🚧?',cx+TW*0.3,cy-TH*0.4);}
+  } else if(t.stale){
+    // STALE: muddy brown water with bubbles, feeds nothing
+    ctx.fillStyle='rgba(60,35,10,.5)';
+    ctx.beginPath();ctx.arc(cx-6,cy,2.2,0,7);ctx.arc(cx+5,cy+2,1.8,0,7);ctx.fill();
+    if(isDam){ctx.font='12px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🚧',cx,cy-2);}
+    pill(cx,cy-TH/2-11,'stale!',9,'rgba(90,50,10,.85)');
+  } else {
+    ctx.fillStyle='#6b543a';ctx.font='12px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText(isDam?'🚧':'⋯',cx,cy);
+    if(isDam)pill(cx,cy-TH/2-11,'DRY',9);
+  }
+}
+function paintFarm(t,x,y,F){
+  const cx=F.cx, cy=F.cy;
+  const IQ=insetC(F,0.8);
+  polyFill([IQ.N,IQ.E,IQ.S,IQ.W],t.water?'#8bd450':'#a98a52');
+  // crop rows along the tile's local x-axis, clipped to the plot
+  ctx.save();polyPath([IQ.N,IQ.E,IQ.S,IQ.W]);ctx.clip();
+  ctx.strokeStyle='rgba(70,45,15,.55)';ctx.lineWidth=1;
+  {
+    const ax=F.E.x-F.W.x, ay=F.E.y-F.W.y, al=Math.hypot(ax,ay)||1, ux=ax/al, uy=ay/al;
+    for(let k=-1;k<=1;k++){
+      const ox=-uy*k*TH*0.2, oy=ux*k*TH*0.2;
+      ctx.beginPath();
+      ctx.moveTo(cx-ux*TW*0.36+ox,cy-uy*TW*0.36+oy);
+      ctx.lineTo(cx+ux*TW*0.36+ox,cy+uy*TW*0.36+oy);
+      ctx.stroke();
+    }
+  }
+  ctx.fillStyle=t.water?'#2f7d33':'#8a7a4a';
+  for(let i=0;i<5;i++){const ddx=(i-2)*TW*0.11;ctx.beginPath();ctx.arc(cx+ddx,cy+((i%2)?2.5:-2.5),1.8,0,7);ctx.fill();}
+  ctx.restore();
+  ctx.strokeStyle='rgba(0,0,0,.25)';ctx.lineWidth=1;polyPath([IQ.N,IQ.E,IQ.S,IQ.W]);ctx.stroke();
+  // fences on the two front edges
+  let FC=IQ.N; if(IQ.E.y>FC.y)FC=IQ.E; if(IQ.S.y>FC.y)FC=IQ.S; if(IQ.W.y>FC.y)FC=IQ.W;
+  const adj=FC===IQ.N?[[IQ.W,IQ.N],[IQ.N,IQ.E]]:FC===IQ.E?[[IQ.N,IQ.E],[IQ.E,IQ.S]]:FC===IQ.S?[[IQ.E,IQ.S],[IQ.S,IQ.W]]:[[IQ.S,IQ.W],[IQ.W,IQ.N]];
+  ctx.strokeStyle='#6b4a2c';ctx.lineWidth=2.5;
+  adj.forEach(([A,B])=>{ctx.beginPath();ctx.moveTo(A.x,A.y);ctx.lineTo(B.x,B.y);ctx.stroke();});
+  const posts=[];
+  adj.forEach(([A,B])=>{posts.push(A,B,{x:(A.x+B.x)/2,y:(A.y+B.y)/2});});
+  ctx.fillStyle='#4a3018';posts.forEach(P=>{ctx.fillRect(P.x-1.5,P.y-7,3,7);});
+  ctx.font='14px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t.water?'🌾':'🥀',cx,cy-9);
+  if(t.fStock>0&&performance.now()-(t.fBump||0)<3000)pill(cx,cy-TH/2-11,t.fStock+'🌾',10);
+  if(!t.water&&!t.broken){ctx.font='13px serif';ctx.fillText('⚠️',cx+TW*0.3,cy-TH*0.4);}
+  if(t.broken){
+    polyFill([IQ.N,IQ.E,IQ.S,IQ.W],'rgba(40,20,20,.5)');
+    ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🐾',cx,cy-8);
+    pill(cx,cy-TH/2-11,'broken!',9,'rgba(120,20,20,.85)');
+  }
+}
+function paintHouse(t,x,y,F){
+  // walls + hip roof on the faces toward the viewer; same footprint, taller per level
+  const cx=F.cx, cy=F.cy;
+  const lv=t.level||0, hiRise=lv>=4;
+  const Q=insetC(F,0.6);
+  const wallH=12+lv*8, roofH=10;
+  const seg=(A,B,f0,f1,h0,h1,col)=>{
+    ctx.fillStyle=col;ctx.beginPath();
+    const X=(p,q,f)=>p+(q-p)*f;
+    ctx.moveTo(X(A.x,B.x,f0),X(A.y,B.y,f0)-h0);
+    ctx.lineTo(X(A.x,B.x,f1),X(A.y,B.y,f1)-h0);
+    ctx.lineTo(X(A.x,B.x,f1),X(A.y,B.y,f1)-h1);
+    ctx.lineTo(X(A.x,B.x,f0),X(A.y,B.y,f0)-h1);
+    ctx.closePath();ctx.fill();
+  };
+  const F2={'+x':[edgeMid(Q.N,Q.E),Q.E,edgeMid(Q.E,Q.S)],'-x':[edgeMid(Q.W,Q.N),Q.W,edgeMid(Q.S,Q.W)],
+    '+y':[edgeMid(Q.S,Q.W),Q.S,edgeMid(Q.E,Q.S)],'-y':[edgeMid(Q.W,Q.N),Q.N,edgeMid(Q.E,Q.N)]};
+  const c=Math.cos(view.rot), s=Math.sin(view.rot);
+  const vis=[(c+s)>=0?'+x':'-x', (c-s)>=0?'+y':'-y'];
+  const hid=[(c+s)>=0?'-x':'+x', (c-s)>=0?'-y':'+y'];
+  const apex={x:cx,y:Math.min(Q.N.y,Q.E.y,Q.S.y,Q.W.y)-wallH-roofH};
+  const winC=hiRise?'#e8f4ff':'#7fb8e0';
+  const wallA=hiRise?'#7fa0c0':'#d9b978', wallB=hiRise?'#9db8d2':'#f3dfae';
+  ctx.fillStyle='rgba(0,0,0,.25)';ctx.beginPath();ctx.ellipse(cx,Math.max(Q.S.y,Q.E.y,Q.W.y)-1,TW*0.3,4,0,0,7);ctx.fill();
+  // back roof planes (darker, first)
+  hid.forEach(k=>{const P=F2[k];
+    ctx.fillStyle=hiRise?'#3a5a78':'#8a5f30';
+    ctx.beginPath();
+    ctx.moveTo(P[0].x,P[0].y-wallH);ctx.lineTo(P[1].x,P[1].y-wallH);ctx.lineTo(P[2].x,P[2].y-wallH);
+    ctx.lineTo(apex.x,apex.y);ctx.closePath();ctx.fill();});
+  // walls on the two visible faces
+  vis.forEach((k,vi)=>{const P=F2[k];
+    ctx.fillStyle=vi===0?wallA:wallB;ctx.beginPath();
+    ctx.moveTo(P[0].x,P[0].y);ctx.lineTo(P[1].x,P[1].y);ctx.lineTo(P[2].x,P[2].y);
+    ctx.lineTo(P[2].x,P[2].y-wallH);ctx.lineTo(P[1].x,P[1].y-wallH);ctx.lineTo(P[0].x,P[0].y-wallH);
+    ctx.closePath();ctx.fill();});
+  // ground floor: window, door, window
+  const LF=F2[vis[0]], RF=F2[vis[1]];
+  seg(LF[0],LF[1],0.3,0.52,3,8,winC);
+  seg(RF[1],RF[2],0.48,0.7,0,9,'#5b3a22');
+  seg(RF[0],RF[1],0.1,0.28,3,8,winC);
+  for(let f=1;f<=lv+1;f++){const yb=f*9+1;if(yb+5>wallH-1)break;
+    seg(LF[0],LF[1],0.3,0.52,yb,yb+5,winC);
+    seg(RF[0],RF[1],0.3,0.52,yb,yb+5,winC);}
+  // front roof planes
+  const roofCols=hiRise?['#4a6a8a','#5f87a8']:['#a9713f','#c98f3d'];
+  vis.forEach((k,vi)=>{const P=F2[k];
+    ctx.fillStyle=roofCols[vi];
+    ctx.beginPath();
+    ctx.moveTo(P[0].x,P[0].y-wallH);ctx.lineTo(P[1].x,P[1].y-wallH);ctx.lineTo(P[2].x,P[2].y-wallH);
+    ctx.lineTo(apex.x,apex.y);ctx.closePath();ctx.fill();});
+  if((t.vPop||0)>0&&performance.now()-(t.pBump||0)<3000)pill(cx,apex.y-11,t.vPop+'👪',11);
+  if(t.broken){
+    polyFill([Q.N,Q.E,Q.S,Q.W],'rgba(40,20,20,.5)');
+    ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🐾',cx,cy-8);
+    pill(cx,apex.y-11,'broken!',9,'rgba(120,20,20,.85)');
+  }
+  if(t.abandoned){
+    polyFill([Q.N,Q.E,Q.S,Q.W],'rgba(50,50,55,.5)');
+    pill(cx,apex.y-11,'empty',9,'rgba(60,60,70,.85)');
+  }
+}
+function paintLake(t,x,y,F){
+  const cx=F.cx, cy=F.cy, N=F.N, E=F.E, S=F.S, W=F.W;
+  const g=ctx.createLinearGradient(0,cy-TH/2,0,cy+TH/2);g.addColorStop(0,'#7cc7f2');g.addColorStop(1,'#2f9fe0');
+  polyFill([N,E,S,W],g);
+  ctx.strokeStyle='rgba(180,220,255,.75)';ctx.lineWidth=1.5;
+  const wob=Math.sin(flowPhase*2+x+y)*1.5;
+  ctx.beginPath();ctx.ellipse(cx,cy-2,TW*0.2,2.5,0,0,7);ctx.stroke();
+  ctx.beginPath();ctx.ellipse(cx+2+wob,cy+4,TW*0.15,2,0,0,7);ctx.stroke();
+}
+function draw(){
+  if(!paused)flowPhase+=0.05;
+  // ---- isometric valley backdrop ----
+  paintBackdrop();
+  ctx.save();
+  const mc0=mapCenter();
+  ctx.translate(cv.width/2+view.x,cv.height/2+view.y);ctx.scale(view.z,view.z);ctx.translate(-mc0.x,-mc0.y);
+  const order=buildPaintOrder();
+  for(const _o of order){const x=_o[1], y=_o[2], F=_o[3];
+    const inMap=x>=0&&x<COLS&&y>=0&&y<ROWS;
+    const cx=F.cx, cy=F.cy, N=F.N, E=F.E, S=F.S, W=F.W;
+    const snowLv=level===2, checker=(x+y)%2===0;
+    if(!inMap){paintDeco(x,y,F);continue;}
+    const t=grid[y][x];
+    paintBlock(t,x,y,F);
+    paintTerrain(t,x,y,F);
+    ctx.strokeStyle='rgba(0,0,0,.18)';ctx.lineWidth=1;polyPath([N,E,S,W]);ctx.stroke();
+
+    // work crews swarm active jobs by day (only once 3+ houses stand)
+    paintCrews(t,F);
+    paintSpring(t,F);
+
+    // structures
+    paintStructure(t,x,y,F);
+
+    // selection
+    paintSelection(x,y,F);
+  }
+  // red placement cross on the hovered square's middle (builds land here)
+  paintCross();
+  // 🛶 canoe traffic: hulls turn into bends, paddler aboard
+  paintPaddlers();
+  // tutorial: flashing highlight on the two rocks blocking the spring (until a canal is dug)
+  paintTutRocks();
+  // bobbing red arrow only on the 4/4 block: upgrade it to a dam to push further
+  paintArrows();
+  paintNightAnimals();
+  ctx.restore(); // screen space for overlays
+  paintNightOverlay();
+  paintPaused();
+  requestAnimationFrame(draw);
+}
+
+function posFloat(e){
+  const r=cv.getBoundingClientRect();
+  const cx=(e.touches&&e.touches[0]?e.touches[0].clientX:e.clientX), cy=(e.touches&&e.touches[0]?e.touches[0].clientY:e.clientY);
+  const px=(cx-r.left)/r.width*cv.width, py=(cy-r.top)/r.height*cv.height;
+  // screen -> world: un-zoom/pan, un-project, un-spin about the grid centre
+  const mc=mapCenter();
+  const sx0=(px-cv.width/2-view.x)/view.z, sy0=(py-cv.height/2-view.y)/view.z;
+  const ccx=(COLS-1)/2, ccy=(ROWS-1)/2;
+  const a=(sx0-(mc.x-OX))/(TW/2), b=(sy0-(mc.y-OY))/(TH/2);
+  const rx=(a+b)/2, ry=(b-a)/2;
+  const c=Math.cos(view.rot), s=Math.sin(view.rot);
+  const fx=rx*c+ry*s+ccx, fy=-rx*s+ry*c+ccy;
+  if(fx<0||fy<0||fx>=COLS||fy>=ROWS)return null; // decorative surround: not playable
+  return {fx,fy};
+}
+function posToTile(e){
+  const p=posFloat(e);
+  return p?{x:Math.floor(p.fx),y:Math.floor(p.fy)}:null;
+}
+cv.addEventListener('pointerdown',e=>{if(e.button===2||e.button===1)return;isDown=true;lastHit='';try{cv.setPointerCapture(e.pointerId);}catch(_){}const pt=posToTile(e);if(!pt)return;tryBuild(pt.x,pt.y,false);});
+cv.addEventListener('pointermove',e=>{
+  const hp=posToTile(e);hover=hp?{x:hp.x,y:hp.y}:null;
+  if(rotating){view.rot+=(e.clientX-rotLX)*0.005;rotLX=e.clientX;return;}
+  if(panning){const r=cv.getBoundingClientRect(),k=cv.width/r.width;view.x+=(e.clientX-panLX)*k;view.y+=(e.clientY-panLY)*k;panLX=e.clientX;panLY=e.clientY;clampView();return;}
+  // 🌙 night warding: wave over a beast's tile 15× to chase it off (saves the building)
+  if(nightLeft>0){
+    const pt=posToTile(e);if(!pt)return;
+    const {x,y}=pt, key=x+','+y;
+    if(key!==lastWard){
+      lastWard=key;
+      const a=animals.find(a=>a.x===x&&a.y===y);
+      if(a){
+        a.scares++;
+        if(a.scares>=15){
+          animals=animals.filter(o=>o!==a);
+          grid[y][x].broken=false;
+          updateHUD();sfx(1200,0.15,'square',0.08);setTimeout(()=>sfx(300,0.2,'square',0.07),110);
+          log(`🏃 ${a.kind} chased off @(${x},${y}) after 15 waves! Building saved — no mending needed.`);
+        } else sfx(200+a.scares*15,0.05,'square',0.04);
+      }
+    }
+  }
+  if(!isDown)return;if(tool!=='canal'&&tool!=='bulldoze'&&tool!=='chop'&&tool!=='mine')return;const pt2=posToTile(e);if(!pt2)return;tryBuild(pt2.x,pt2.y,true);});
+window.addEventListener('pointerup',()=>{isDown=false;lastHit='';panning=false;rotating=false;});
+cv.addEventListener('click',e=>{const pt=posToTile(e);if(!pt)return;selected={x:pt.x,y:pt.y};renderInfo();});
+// right-drag pans, wheel zooms
+let panning=false, panLX=0, panLY=0, rotating=false, rotLX=0;
+cv.addEventListener('contextmenu',e=>e.preventDefault());
+cv.addEventListener('pointerleave',()=>{hover=null;});
+cv.addEventListener('pointerdown',e=>{if(e.button===2&&!rotating){rotating=true;rotLX=e.clientX;try{cv.setPointerCapture(e.pointerId);}catch(_){}return;}if(e.button===1&&!panning){panning=true;panLX=e.clientX;panLY=e.clientY;try{cv.setPointerCapture(e.pointerId);}catch(_){}}});
+cv.addEventListener('wheel',e=>{e.preventDefault();
+  const r=cv.getBoundingClientRect();
+  const mx=(e.clientX-r.left)/r.width*cv.width, my=(e.clientY-r.top)/r.height*cv.height;
+  const old=view.z;
+  view.z=Math.min(3,Math.max(0.45,view.z*(e.deltaY<0?1.12:1/1.12)));
+  const k=view.z/old; // zoom into the cursor: keep its world point fixed
+  view.x+=(1-k)*(mx-cv.width/2-view.x); view.y+=(1-k)*(my-cv.height/2-view.y);
+  clampView();
+},{passive:false});
+
+// tools UI
+const tdiv=document.getElementById('tools');
+TOOLS.forEach(t=>{
+  const b=document.createElement('button');b.className='tool'+(t.id===tool?' active':'');b.id='tool-'+t.id;
+  b.innerHTML=`<span class="ico">${t.ico}</span><span><b>${t.name} ${t.cost?'$'+t.cost:''}</b></span>`;
+  b.onclick=()=>{tool=t.id;document.querySelectorAll('.tool').forEach(el=>el.classList.remove('active'));b.classList.add('active');sfx(500,0.06,'square',0.05);showToolDesc();document.getElementById('hint').textContent=t.id==='canal'?'Drag DOWNHILL from the peak. Blue = good, brown = stale past 4 — add 🚧 dams!':t.desc;};
+  tdiv.appendChild(b);
+});
+function showToolDesc(){
+  const t=TOOLS.find(t=>t.id===tool);
+  if(!t)return;
+  let extra='';
+  if(t.id==='expand'&&selected){const s=grid[selected.y]&&grid[selected.y][selected.x];
+    if(s&&s.struct==='village'&&(s.level||0)<4)extra=` — next Lv${(s.level||0)+1}: ${6+2*(s.level||0)}🪵 $${30*Math.pow(2,s.level||0)}`;}
+  document.getElementById('toolDesc').innerHTML=`<span style="font-size:13px">${t.ico}</span> <b>${t.name}${t.cost?' $'+t.cost:''}</b> — ${t.desc}${extra}`;
+}
+function refreshToolPrices(){
+  const set=(id,cost)=>{const b=document.querySelector('#tool-'+id+' b');if(b){const t=TOOLS.find(t=>t.id===id);b.textContent=t.name+' $'+cost;}};
+  set('village',Math.round(50*priceMult('village')));
+  set('dam',Math.round(35*priceMult('dam')));
+  set('farm',Math.round(25*priceMult('farm')));
+}
+document.getElementById('bStart').onclick=()=>{document.getElementById('overlay').classList.add('hidden');sfx(660,0.15);renderTut();};
+document.getElementById('tutSkip').onclick=()=>{tut.done=true;renderTut();};
+document.getElementById('farmAlertOk').onclick=()=>{document.getElementById('farmAlert').classList.add('hidden');};
+document.getElementById('damAlertOk').onclick=()=>{document.getElementById('damAlert').classList.add('hidden');};
+document.getElementById('mendAlertOk').onclick=()=>{document.getElementById('mendAlert').classList.add('hidden');};
+document.getElementById('bHelp').onclick=()=>document.getElementById('overlay').classList.remove('hidden');
+document.getElementById('bNew').onclick=()=>{if(confirm('Start a new valley?'))newMap();};
+function setPaused(p){paused=p;
+  document.getElementById('bPause').classList.toggle('primary',p);
+  document.getElementById('bPlay').classList.toggle('primary',!p);}
+document.getElementById('bPause').onclick=()=>{setPaused(true);sfx(300,0.06,'square',0.05);};
+document.getElementById('bPlay').onclick=()=>{setPaused(false);sfx(500,0.06,'square',0.05);};
+document.getElementById('b1').onclick=e=>{speed=1;setSpeedBtn(e.target)};document.getElementById('b2').onclick=e=>{speed=2;setSpeedBtn(e.target)};document.getElementById('b3').onclick=e=>{speed=4;setSpeedBtn(e.target)};
+function setSpeedBtn(b){['b1','b2','b3'].forEach(id=>document.getElementById(id).classList.remove('primary'));b.classList.add('primary');setPaused(false);}
+
+newMap();draw();renderTut();showToolDesc();setPaused(false);
+let acc=0,last=performance.now();
+function loop(now){let dt=(now-last);last=now;updateWorld();if(!paused){acc+=dt*speed;money+=totalPop()*dt/1000*speed*0.5;if(now-lastRustle>12000&&treesExist){lastRustle=now;rustle();}while(acc>800){acc-=800;simTick();}}requestAnimationFrame(loop);}
+requestAnimationFrame(loop);
+
+// keyboard shortcuts 1-9, 0 (inspect is click-only)
+window.addEventListener('keydown',e=>{
+  const ids=['canal','dam','farm','village','expand','chop','mine','mend','lake','bulldoze','inspect'];
+  let i=e.key==='0'?9:parseInt(e.key)-1;
+  if(ids[i])document.getElementById('tool-'+ids[i]).click();
+});
+</script>
+</body>
+</html>
