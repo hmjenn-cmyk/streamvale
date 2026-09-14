@@ -239,7 +239,7 @@ function rustle(){noiseBurst(0.5,0.05,1400);} // 50% volume leaves
 function flowSnd(){noiseBurst(1.2,0.05,650);} // 50% volume stream
 function drip(){sfx(880,0.09,'sine',0.05);setTimeout(()=>sfx(520,0.08,'sine',0.04),95);} // stagnant drip
 
-function blankTile(base){return {base,struct:null,water:false,stale:false,dist:Infinity,job:null,broken:false,abandoned:false,bigTree:false,stump:false,greenT:0,level:0,fProg:0,fStock:0,vPop:0,vTimer:0,vStarve:0};}
+function blankTile(base){return {base,struct:null,water:false,stale:false,dist:Infinity,job:null,broken:false,abandoned:false,bigTree:false,stump:false,greenT:0,level:0,fProg:0,fStock:0,vPop:0,vTimer:0,vStarve:0,fBump:0,pBump:0};}
 function genBase(x,y){
   const r=Math.random();
   if(y===0)return r<0.15?'tree':'rock';              // high crags (+25% trees)
@@ -453,7 +453,7 @@ function tryBuild(x,y,isDrag){
       if(wood<wNeed){log(`⛔ Level ${t.level+1} needs ${wNeed}🪵 (have ${wood}).`);sfx(140,0.15,'sawtooth',0.08);return;}
       if(money<mNeed){log(`⛔ Level ${t.level+1} also needs $${mNeed}.`);sfx(140,0.15,'sawtooth',0.08);return;}
       wood-=wNeed;money-=mNeed;t.level=(t.level||0)+1;
-      const before=t.vPop||2;t.vPop=Math.min(maxPop(t.level),before*2);
+      const before=t.vPop||2;t.vPop=Math.min(maxPop(t.level),before*2);t.pBump=performance.now();
       computeWater();updateHUD();sfx(523,0.15,'sine',0.1);setTimeout(()=>sfx(784,0.2,'sine',0.1),120);
       log(t.level>=4?`🏙️ HIGH-RISE @(${x},${y})! ${before}→${t.vPop}👪 — max level, 24 max!`:`🏘️ House @(${x},${y}) → level ${t.level}! ${before}→${t.vPop}👪 (max ${maxPop(t.level)}).`);tutDone('expand');
     } else if(t.struct==='village'){log('Already max level (24👪 high-rise)!');}
@@ -489,7 +489,7 @@ function tryBuild(x,y,isDrag){
     if(t.base!=='grass'||t.struct!==null){log('⛔ Houses go on empty GREEN land (desert greens up beside canals in 30s)!');sfx(140,0.15,'sawtooth',0.08);return;}
     const hCost=Math.round(50*priceMult('village'));
     if(money<hCost){log(`⛔ House costs $${hCost} (+65% every 8 houses — ${structCount('village')} standing).`);sfx(140,0.15,'sawtooth',0.08);return;}
-    money-=hCost;t.struct='village';t.level=0;t.vPop=2;t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
+    money-=hCost;t.struct='village';t.level=0;t.vPop=2;t.pBump=performance.now();t.broken=false;t.abandoned=false;t.vTimer=0;t.vStarve=0;computeWater();updateHUD();sfx(440,0.15,'sine',0.1);tutDone('house');log(`🏠 House raised at (${x},${y})! +2👪. Goal is ${currentGoal()} — build many & expand!`);
   }
   if(tool==='mend'){
     if((t.struct==='farm'||t.struct==='village')&&t.broken){
@@ -498,7 +498,7 @@ function tryBuild(x,y,isDrag){
         wood-=4;t.broken=false;computeWater();updateHUD();sfx(660,0.12,'sine',0.1);tutDone('mend');log(`🔨 Farm @(${x},${y}) mended for 4🪵!`);
       } else {
         if(stone<4){log(`⛔ Mending this house needs 4🪨 (have ${stone}). Mine barrier rock!`);sfx(140,0.15,'sawtooth',0.08);return;}
-        stone-=4;t.broken=false;computeWater();updateHUD();sfx(523,0.12,'sine',0.1);tutDone('mend');log(`🔨 House @(${x},${y}) mended for 4🪨 — ${t.vPop}👪 return!`);
+        stone-=4;t.broken=false;t.pBump=performance.now();computeWater();updateHUD();sfx(523,0.12,'sine',0.1);tutDone('mend');log(`🔨 House @(${x},${y}) mended for 4🪨 — ${t.vPop}👪 return!`);
       }
     } else if(!isDrag){log(t.struct?'⛔ Only broken 🐾 farms/houses need mending.':'⛔ Nothing to mend here.');sfx(140,0.15,'sawtooth',0.08);}
     selected={x,y};renderInfo();return;
@@ -538,7 +538,7 @@ function simTick(){
   let harvests=0, workers=totalPop();
   for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){
     const t=grid[y][x];
-    if(t.struct==='farm'&&t.water&&!t.broken&&workers>0&&t.fStock<5){workers--;t.fProg++;if(t.fProg>=2){t.fProg=0;t.fStock=Math.min(5,t.fStock+1);food++;harvests++;money+=0.5;}}
+    if(t.struct==='farm'&&t.water&&!t.broken&&workers>0&&t.fStock<5){workers--;t.fProg++;if(t.fProg>=2){t.fProg=0;t.fStock=Math.min(5,t.fStock+1);t.fBump=performance.now();food++;harvests++;money+=0.5;}}
     if(t.struct==='farm'&&!t.water){t.fProg=0;}
   }
   if(harvests>0&&totalTicks%4===0)sfx(980,0.07,'triangle',0.03);
@@ -564,7 +564,7 @@ function simTick(){
       let rx=-1,ry=-1;
       for(let y=0;y<ROWS&&rx<0;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
         if(t.struct==='village'&&!t.broken&&t.abandoned){rx=x;ry=y;break;}}
-      if(rx>=0){grid[ry][rx].vPop=2;grid[ry][rx].abandoned=false;updateHUD();sfx(660,0.12,'sine',0.08);log(`🏠 Settlers return to @(${rx},${ry})! +2👪 (farms suffice).`);}
+      if(rx>=0){grid[ry][rx].vPop=2;grid[ry][rx].pBump=performance.now();grid[ry][rx].abandoned=false;updateHUD();sfx(660,0.12,'sine',0.08);log(`🏠 Settlers return to @(${rx},${ry})! +2👪 (farms suffice).`);}
     }
   }
   // 🤖 crews fell trees on their own once population hits 50 (never at night)
@@ -1053,7 +1053,7 @@ function paintFarm(t,x,y,F){
   adj.forEach(([A,B])=>{posts.push(A,B,{x:(A.x+B.x)/2,y:(A.y+B.y)/2});});
   ctx.fillStyle='#4a3018';posts.forEach(P=>{ctx.fillRect(P.x-1.5,P.y-7,3,7);});
   ctx.font='14px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText(t.water?'🌾':'🥀',cx,cy-9);
-  if(t.fStock>0)pill(cx,cy-TH/2-11,t.fStock+'🌾',10);
+  if(t.fStock>0&&performance.now()-(t.fBump||0)<3000)pill(cx,cy-TH/2-11,t.fStock+'🌾',10);
   if(!t.water&&!t.broken){ctx.font='13px serif';ctx.fillText('⚠️',cx+TW*0.3,cy-TH*0.4);}
   if(t.broken){
     polyFill([IQ.N,IQ.E,IQ.S,IQ.W],'rgba(40,20,20,.5)');
@@ -1112,7 +1112,7 @@ function paintHouse(t,x,y,F){
     ctx.beginPath();
     ctx.moveTo(P[0].x,P[0].y-wallH);ctx.lineTo(P[1].x,P[1].y-wallH);ctx.lineTo(P[2].x,P[2].y-wallH);
     ctx.lineTo(apex.x,apex.y);ctx.closePath();ctx.fill();});
-  pill(cx,apex.y-11,t.vPop+'👪',11);
+  if((t.vPop||0)>0&&performance.now()-(t.pBump||0)<3000)pill(cx,apex.y-11,t.vPop+'👪',11);
   if(t.broken){
     polyFill([Q.N,Q.E,Q.S,Q.W],'rgba(40,20,20,.5)');
     ctx.font='15px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🐾',cx,cy-8);
