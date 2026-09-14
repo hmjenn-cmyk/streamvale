@@ -712,17 +712,89 @@ function updateWorld(){
     } else {const step=Math.min(d,dtG*1.6);p.x+=dx/d*step;p.y+=dy/d*step;p.vx=dx/d;p.vy=dy/d;}
   }
 }
+function paintBackdrop(){
+  const bg=ctx.createLinearGradient(0,0,0,cv.height);
+  bg.addColorStop(0,'#0d1f30');bg.addColorStop(0.55,'#0b1a2b');bg.addColorStop(1,'#080f18');
+  ctx.fillStyle=bg;ctx.fillRect(0,0,cv.width,cv.height);
+  const gl=ctx.createRadialGradient(OX,OY+190,40,OX,OY+190,430);
+  gl.addColorStop(0,'rgba(70,130,180,.15)');gl.addColorStop(1,'rgba(70,130,180,0)');
+  ctx.fillStyle=gl;ctx.fillRect(0,0,cv.width,cv.height);
+}
+function paintCross(){
+  // red placement cross on the hovered square's middle (builds land here)
+  if(!(hover&&tool!=='inspect'))return;
+  const F=tileFrame(hover.x,hover.y), hx=(F.N.x+F.S.x)/2, hy=(F.N.y+F.S.y)/2;
+  const a=Math.max(3,TW*0.135);
+  ctx.save();ctx.lineCap='round';
+  ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=4.5;
+  ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
+  ctx.strokeStyle='#ef2b2b';ctx.lineWidth=2.25;
+  ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
+  ctx.restore();
+}
+function paintPaddlers(){
+  paddlers.forEach((p,i)=>{
+    const bob=Math.abs(Math.sin(flowPhase*3+i*1.7))*2;
+    const sx=isoCX(p.x,p.y), sy=isoCY(p.x,p.y)-4-bob;
+    const gd=gridDirScreen(p.vx||1,p.vy||0), ang=Math.atan2(gd.y,gd.x);
+    ctx.save();ctx.translate(sx,sy);ctx.rotate(ang+Math.PI/2);
+    ctx.font='17px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+    ctx.fillText('🛶',0,0);ctx.restore();
+    ctx.fillStyle='#f2c89b';ctx.beginPath();ctx.arc(sx,sy-2,4,0,7);ctx.fill();
+    ctx.fillStyle='#3a6ea5';ctx.fillRect(sx-3,sy+1,6,5);
+  });
+}
+function paintTutRocks(){
+  if(tut.canal)return;
+  let sx=-1;for(let x=0;x<COLS;x++)if(grid[0][x].base==='source'){sx=x;break;}
+  if(sx<0)return;
+  let marked=0;
+  for(let y=1;y<ROWS&&marked<2;y++){if(grid[y][sx].base==='rock'&&!grid[y][sx].struct){
+    const F2=tileFrame(sx,y);
+    ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=3;ctx.setLineDash([6,4]);ctx.lineDashOffset=-flowPhase*20;
+    ctx.shadowColor='#ffd54a';ctx.shadowBlur=10;
+    polyPath([F2.N,F2.E,F2.S,F2.W]);ctx.stroke();ctx.restore();marked++;
+  }}
+}
+function paintArrows(){
+  const bob=Math.sin(flowPhase*5)*4;let shown=0;
+  for(let y=0;y<ROWS&&shown<14;y++)for(let x=0;x<COLS&&shown<14;x++){
+    const t=grid[y][x];if(t.struct!=='canal')continue;
+    if(!(t.water&&t.dist===MAX_REACH))continue;shown++;
+    const cx=isoCX(x,y), cy=isoCY(x,y), ay=cy-TH/2-14+bob;
+    ctx.fillStyle='#ef2b2b';ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;
+    ctx.beginPath();ctx.moveTo(cx-8,ay-8);ctx.lineTo(cx+8,ay-8);ctx.lineTo(cx,ay+3);ctx.closePath();ctx.fill();ctx.stroke();
+  }
+}
+function paintNightAnimals(){
+  if(nightLeft<=0)return;
+  ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  animals.forEach((a,i)=>{
+    const ax=isoCX(a.x,a.y)+Math.sin(flowPhase*1.6+i*2.1)*9;
+    const ay=isoCY(a.x,a.y)-6+Math.abs(Math.sin(flowPhase*2.2+i*1.3))*5;
+    const shake=a.scares>0?Math.sin(flowPhase*14+i)*Math.min(4,a.scares/5):0;
+    ctx.fillText(a.kind,ax+shake,ay);
+    const bw=34, bfrac=Math.max(0,1-a.scares/15);
+    ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(ax-bw/2,ay-22,bw,5);
+    ctx.fillStyle='#ef2b2b';ctx.fillRect(ax-bw/2,ay-22,bw*bfrac,5);
+  });
+}
+function paintNightOverlay(){
+  if(nightLeft<=0)return;
+  ctx.fillStyle='rgba(6,8,30,.55)';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌙',cv.width/2,cv.height/2-16);
+  ctx.fillStyle='#dbe7ff';ctx.font='bold 20px sans-serif';ctx.fillText(`NIGHT ${day} — wave over beasts 15× to scare them!`,cv.width/2,cv.height/2+22);
+}
+function paintPaused(){
+  if(!paused)return;
+  ctx.fillStyle='rgba(120,130,140,.55)';ctx.fillRect(0,0,cv.width,cv.height);
+  ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
+  ctx.fillText('paused',cv.width/2,cv.height/2);
+}
 function draw(){
   if(!paused)flowPhase+=0.05;
   // ---- isometric valley backdrop ----
-  {
-    const bg=ctx.createLinearGradient(0,0,0,cv.height);
-    bg.addColorStop(0,'#0d1f30');bg.addColorStop(0.55,'#0b1a2b');bg.addColorStop(1,'#080f18');
-    ctx.fillStyle=bg;ctx.fillRect(0,0,cv.width,cv.height);
-    const gl=ctx.createRadialGradient(OX,OY+190,40,OX,OY+190,430);
-    gl.addColorStop(0,'rgba(70,130,180,.15)');gl.addColorStop(1,'rgba(70,130,180,0)');
-    ctx.fillStyle=gl;ctx.fillRect(0,0,cv.width,cv.height);
-  }
+  paintBackdrop();
   ctx.save();
   const mc0=mapCenter();
   ctx.translate(cv.width/2+view.x,cv.height/2+view.y);ctx.scale(view.z,view.z);ctx.translate(-mc0.x,-mc0.y);
@@ -1048,74 +1120,17 @@ function draw(){
     }
   }
   // red placement cross on the hovered square's middle (builds land here)
-  if(hover&&tool!=='inspect'){
-    const F=tileFrame(hover.x,hover.y), hx=(F.N.x+F.S.x)/2, hy=(F.N.y+F.S.y)/2;
-    const a=Math.max(3,TW*0.135);
-    ctx.save();ctx.lineCap='round';
-    ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=4.5;
-    ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
-    ctx.strokeStyle='#ef2b2b';ctx.lineWidth=2.25;
-    ctx.beginPath();ctx.moveTo(hx-a,hy-a);ctx.lineTo(hx+a,hy+a);ctx.moveTo(hx-a,hy+a);ctx.lineTo(hx+a,hy-a);ctx.stroke();
-    ctx.restore();
-  }
+  paintCross();
   // 🛶 canoe traffic: hulls turn into bends, paddler aboard
-  paddlers.forEach((p,i)=>{
-    const bob=Math.abs(Math.sin(flowPhase*3+i*1.7))*2;
-    const sx=isoCX(p.x,p.y), sy=isoCY(p.x,p.y)-4-bob;
-    const gd=gridDirScreen(p.vx||1,p.vy||0), ang=Math.atan2(gd.y,gd.x);
-    ctx.save();ctx.translate(sx,sy);ctx.rotate(ang+Math.PI/2);
-    ctx.font='17px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('🛶',0,0);ctx.restore();
-    ctx.fillStyle='#f2c89b';ctx.beginPath();ctx.arc(sx,sy-2,4,0,7);ctx.fill();
-    ctx.fillStyle='#3a6ea5';ctx.fillRect(sx-3,sy+1,6,5);
-  });
+  paintPaddlers();
   // tutorial: flashing highlight on the two rocks blocking the spring (until a canal is dug)
-  if(!tut.canal){
-    let sx=-1;for(let x=0;x<COLS;x++)if(grid[0][x].base==='source'){sx=x;break;}
-    if(sx>=0){
-      let marked=0;
-      for(let y=1;y<ROWS&&marked<2;y++){if(grid[y][sx].base==='rock'&&!grid[y][sx].struct){
-        const F2=tileFrame(sx,y);
-        ctx.save();ctx.strokeStyle='#ffd54a';ctx.lineWidth=3;ctx.setLineDash([6,4]);ctx.lineDashOffset=-flowPhase*20;
-        ctx.shadowColor='#ffd54a';ctx.shadowBlur=10;
-        polyPath([F2.N,F2.E,F2.S,F2.W]);ctx.stroke();ctx.restore();marked++;
-      }}
-    }
-  }
+  paintTutRocks();
   // bobbing red arrow only on the 4/4 block: upgrade it to a dam to push further
-  {
-    const bob=Math.sin(flowPhase*5)*4;let shown=0;
-    for(let y=0;y<ROWS&&shown<14;y++)for(let x=0;x<COLS&&shown<14;x++){
-      const t=grid[y][x];if(t.struct!=='canal')continue;
-      if(!(t.water&&t.dist===MAX_REACH))continue;shown++;
-      const cx=isoCX(x,y), cy=isoCY(x,y), ay=cy-TH/2-14+bob;
-      ctx.fillStyle='#ef2b2b';ctx.strokeStyle='rgba(255,255,255,.85)';ctx.lineWidth=1.5;
-      ctx.beginPath();ctx.moveTo(cx-8,ay-8);ctx.lineTo(cx+8,ay-8);ctx.lineTo(cx,ay+3);ctx.closePath();ctx.fill();ctx.stroke();
-    }
-  }
-  if(nightLeft>0){
-    ctx.font='22px serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    animals.forEach((a,i)=>{
-      const ax=isoCX(a.x,a.y)+Math.sin(flowPhase*1.6+i*2.1)*9;
-      const ay=isoCY(a.x,a.y)-6+Math.abs(Math.sin(flowPhase*2.2+i*1.3))*5;
-      const shake=a.scares>0?Math.sin(flowPhase*14+i)*Math.min(4,a.scares/5):0;
-      ctx.fillText(a.kind,ax+shake,ay);
-      const bw=34, bfrac=Math.max(0,1-a.scares/15);
-      ctx.fillStyle='rgba(0,0,0,.55)';ctx.fillRect(ax-bw/2,ay-22,bw,5);
-      ctx.fillStyle='#ef2b2b';ctx.fillRect(ax-bw/2,ay-22,bw*bfrac,5);
-    });
-  }
+  paintArrows();
+  paintNightAnimals();
   ctx.restore(); // screen space for overlays
-  if(nightLeft>0){
-    ctx.fillStyle='rgba(6,8,30,.55)';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.font='36px serif';ctx.textAlign='center';ctx.textBaseline='middle';ctx.fillText('🌙',cv.width/2,cv.height/2-16);
-    ctx.fillStyle='#dbe7ff';ctx.font='bold 20px sans-serif';ctx.fillText(`NIGHT ${day} — wave over beasts 15× to scare them!`,cv.width/2,cv.height/2+22);
-  }
-  if(paused){
-    ctx.fillStyle='rgba(120,130,140,.55)';ctx.fillRect(0,0,cv.width,cv.height);
-    ctx.fillStyle='#fff';ctx.font='bold 34px sans-serif';ctx.textAlign='center';ctx.textBaseline='middle';
-    ctx.fillText('paused',cv.width/2,cv.height/2);
-  }
+  paintNightOverlay();
+  paintPaused();
   requestAnimationFrame(draw);
 }
 
