@@ -678,42 +678,42 @@ function renderInfo(){
 }
 
 // ================= TOP-DOWN RENDERING =================
-function draw(){
-  if(!paused)flowPhase+=0.05;
-  // finish timed chop/mine jobs (real seconds) + desert greening
-  {
-    const nowMs=performance.now();
-    const dtG=Math.min(2,(nowMs-(lastGreenMs||nowMs))/1000);lastGreenMs=nowMs;
-    let anyJob=false, finished=false, greened=0;
-    for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
-      if(t.job){
-        if(paused){t.job.doneAt+=dtG*1000;}
-        else if(nowMs>=t.job.doneAt){
-          if(t.job.kind==='chop'){const w=t.job.big?4:2;t.base='grass';t.bigTree=false;t.stump=true;wood+=w;log(`🪓 Timber! @(${x},${y}) → +${w}🪵 wood (${wood} total).`);sfx(660,0.12,'sine',0.1);}
-          else{t.base='grass';stone+=2;log(`⛏️ Rock cleared @(${x},${y}) → +2🪨 stone (${stone} total). Dig your canal through.`);sfx(440,0.15,'square',0.1);}
-          t.job=null;finished=true;
-        } else anyJob=true;
-      }
-      // desert beside BLUE water greens up after 30s
-      if(t.base==='desert'&&!paused){
-        const wet=neighbors(x,y).some(([nx,ny])=>{const n=grid[ny][nx];return n.water&&(n.base==='source'||n.struct==='canal'||n.struct==='dam'||n.struct==='lake');});
-        if(wet){t.greenT+=dtG;if(t.greenT>=30){t.base='grass';t.greenT=0;greened++;}}
-        else t.greenT=0;
-      }
+function updateWorld(){
+  // frame-rate-independent sim, moved out of draw(): job timers, greening, paddlers
+  const nowMs=performance.now();
+  const dtG=Math.min(2,(nowMs-(lastGreenMs||nowMs))/1000);lastGreenMs=nowMs;
+  let anyJob=false, finished=false, greened=0;
+  for(let y=0;y<ROWS;y++)for(let x=0;x<COLS;x++){const t=grid[y][x];
+    if(t.job){
+      if(paused){t.job.doneAt+=dtG*1000;}
+      else if(nowMs>=t.job.doneAt){
+        if(t.job.kind==='chop'){const w=t.job.big?4:2;t.base='grass';t.bigTree=false;t.stump=true;wood+=w;log(`🪓 Timber! @(${x},${y}) → +${w}🪵 wood (${wood} total).`);sfx(660,0.12,'sine',0.1);}
+        else{t.base='grass';stone+=2;log(`⛏️ Rock cleared @(${x},${y}) → +2🪨 stone (${stone} total). Dig your canal through.`);sfx(440,0.15,'square',0.1);}
+        t.job=null;finished=true;
+      } else anyJob=true;
     }
-    if(finished||greened>0){if(greened>0)log(`🌱 ${greened} desert tile${greened>1?'s':''} turned green beside the water!`);computeWater();updateHUD();}
-    else if(anyJob){const s=Math.floor(nowMs/1000);if(s!==hudSec){hudSec=s;updateHUD();}}
-    // paddlers glide toward their targets along blue water (frozen while paused)
-    if(!paused)for(const p of paddlers){
-      const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy);
-      if(d<0.05){
-        const opts=[];
-        for(const [nx,ny] of neighbors(Math.round(p.x),Math.round(p.y))){const n=grid[ny][nx];
-          if(n.base==='source'||((n.struct==='canal'||n.struct==='dam'||n.struct==='lake')&&n.water))opts.push([nx,ny]);}
-        if(opts.length){const [nx,ny]=opts[(Math.random()*opts.length)|0];p.tx=nx;p.ty=ny;}
-      } else {const step=Math.min(d,dtG*1.6);p.x+=dx/d*step;p.y+=dy/d*step;p.vx=dx/d;p.vy=dy/d;}
+    // desert beside BLUE water greens up after 30s
+    if(t.base==='desert'&&!paused){
+      const wet=neighbors(x,y).some(([nx,ny])=>{const n=grid[ny][nx];return n.water&&(n.base==='source'||n.struct==='canal'||n.struct==='dam'||n.struct==='lake');});
+      if(wet){t.greenT+=dtG;if(t.greenT>=30){t.base='grass';t.greenT=0;greened++;}}
+      else t.greenT=0;
     }
   }
+  if(finished||greened>0){if(greened>0)log(`🌱 ${greened} desert tile${greened>1?'s':''} turned green beside the water!`);computeWater();updateHUD();}
+  else if(anyJob){const s=Math.floor(nowMs/1000);if(s!==hudSec){hudSec=s;updateHUD();}}
+  // paddlers glide toward their targets along blue water (frozen while paused)
+  if(!paused)for(const p of paddlers){
+    const dx=p.tx-p.x, dy=p.ty-p.y, d=Math.hypot(dx,dy);
+    if(d<0.05){
+      const opts=[];
+      for(const [nx,ny] of neighbors(Math.round(p.x),Math.round(p.y))){const n=grid[ny][nx];
+        if(n.base==='source'||((n.struct==='canal'||n.struct==='dam'||n.struct==='lake')&&n.water))opts.push([nx,ny]);}
+      if(opts.length){const [nx,ny]=opts[(Math.random()*opts.length)|0];p.tx=nx;p.ty=ny;}
+    } else {const step=Math.min(d,dtG*1.6);p.x+=dx/d*step;p.y+=dy/d*step;p.vx=dx/d;p.vy=dy/d;}
+  }
+}
+function draw(){
+  if(!paused)flowPhase+=0.05;
   // ---- isometric valley backdrop ----
   {
     const bg=ctx.createLinearGradient(0,0,0,cv.height);
@@ -1227,7 +1227,7 @@ function setSpeedBtn(b){['b1','b2','b3'].forEach(id=>document.getElementById(id)
 
 newMap();draw();renderTut();showToolDesc();setPaused(false);
 let acc=0,last=performance.now();
-function loop(now){let dt=(now-last);last=now;if(!paused){acc+=dt*speed;money+=totalPop()*dt/1000*speed*0.5;if(now-lastRustle>12000&&treesExist){lastRustle=now;rustle();}while(acc>800){acc-=800;simTick();}}requestAnimationFrame(loop);}
+function loop(now){let dt=(now-last);last=now;updateWorld();if(!paused){acc+=dt*speed;money+=totalPop()*dt/1000*speed*0.5;if(now-lastRustle>12000&&treesExist){lastRustle=now;rustle();}while(acc>800){acc-=800;simTick();}}requestAnimationFrame(loop);}
 requestAnimationFrame(loop);
 
 // keyboard shortcuts 1-9, 0 (inspect is click-only)
